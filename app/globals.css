@@ -1,26 +1,97 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+/*
+ * Design tokens from docs/spec.md (section "Design tokens").
+ * Spec tokens reuse shadcn's variable names so shadcn components pick them up;
+ * ink/surface/status are exposed under their spec names too.
+ * Only light mode: the spec defines a single theme.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f6f3;
+  --foreground: #1b1f24;
+  --card: #ffffff;
+  --card-foreground: #1b1f24;
+  --popover: #ffffff;
+  --popover-foreground: #1b1f24;
+  --primary: #1f4e79;
+  --primary-foreground: #ffffff;
+  --muted-foreground: #5b6470;
+  --ring: #1f4e79;
+  --radius: 8px;
+
+  --status-scheduled: #345f8c;
+  --status-scheduled-bg: #e4ecf5;
+  --status-on-site: #9a5208;
+  --status-on-site-bg: #fbebd3;
+  --status-done: #276b43;
+  --status-done-bg: #dff0e5;
+
+  /* Not in the spec; shadcn components need them. Neutral picks that sit with the palette. */
+  --secondary: #ecece7;
+  --secondary-foreground: #1b1f24;
+  --muted: #ecece7;
+  --accent: #ecece7;
+  --accent-foreground: #1b1f24;
+  --destructive: #b42318;
+  --border: #dddcd5;
+  --input: #dddcd5;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ink: var(--foreground);
+  --color-surface: var(--card);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-status-scheduled: var(--status-scheduled);
+  --color-status-scheduled-bg: var(--status-scheduled-bg);
+  --color-status-on-site: var(--status-on-site);
+  --color-status-on-site-bg: var(--status-on-site-bg);
+  --color-status-done: var(--status-done);
+  --color-status-done-bg: var(--status-done-bg);
+
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-inter);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  html {
+    @apply font-sans;
+  }
+  /* Phone first: 16px base, 14px from tablet width up (spec: "14px base, 16px on phone"). */
+  body {
+    @apply bg-background text-foreground;
+    font-size: 16px;
+  }
+  @media (min-width: 768px) {
+    body {
+      font-size: 14px;
+    }
+  }
 }
