@@ -44,13 +44,48 @@ Payments, maps embeds, photo uploads, invoicing, notifications, a custom design 
 | jobs | id, customer_name, address, job_type, scheduled_for (timestamptz), status, crew_id, notes, updated_at | `status` is a Postgres enum: `scheduled`, `on_site`, `done` |
 | job_events (stretch) | id, job_id, changed_by, old_status, new_status, created_at | Written by a trigger |
 
+Time zone: the business runs on `America/Tijuana`. "Today" (crew day view, board date filter, seed data) means today in that zone. `scheduled_for` stays `timestamptz`, stored in UTC.
+
+Data rules (enforced in the database):
+
+- A job may have no crew yet (`crew_id` null). Only the dispatcher sees unassigned jobs.
+- A crew that still has jobs cannot be deleted. Reassign or delete its jobs first.
+- Only crew members belong to a crew. A dispatcher's `crew_id` is always null.
+- `notes` is never null. An empty note is `''`.
+- `updated_at` is set by a trigger on every change to a job.
+
 ## Access rules (row-level security)
 
 - Dispatcher: select, insert, update, delete on all jobs, crews and profiles.
-- Crew: select only jobs where `crew_id` equals their own `crew_id`.
+- Crew: select only jobs where `crew_id` equals their own `crew_id`, and only their own crew's row in `crews`.
 - Crew cannot update the jobs table directly. They change status and notes only through one Postgres function (for example `update_job_status(job_id, new_status, note)`), which checks that the job belongs to their crew and touches no other column.
-- Profiles: a user can read their own profile. A user cannot change their own role.
+- Profiles: a user can read their own profile. A user cannot change their own role or crew (enforced by a trigger, for dispatchers too).
+- New signups start as `crew` with no crew, so they see no jobs until a dispatcher assigns them. The role is never taken from signup data.
+- Logged-out visitors (`anon`) have no access to any table.
 - Tests must prove: a crew cannot read another crew's jobs, cannot edit another crew's job, and cannot change a job's customer, address or crew.
+
+Crew status changes through `update_job_status`:
+
+- Forward only, one step at a time: `scheduled` → `on_site` → `done`. Sending the current status again is allowed, to add a note without moving the job.
+- A crew note is appended to the job's notes on a new line. It never replaces what the dispatcher wrote. Max 1000 characters.
+- A job that doesn't exist and a job from another crew return the same "Job not found" error, so a crew cannot discover other crews' job ids.
+
+## Database workflow
+
+- Schema changes are migration files in `supabase/migrations/`, created with `npx supabase migration new <name>` and applied with `npx supabase db push` (project linked with the Supabase CLI).
+- A migration that has run is never edited. Every change, including a fix or an undo, is a new migration file.
+- `supabase/seed.sql` holds fictional demo data only. It is safe to re-run, and re-running resets the demo jobs to today. It is run in the SQL Editor.
+- Demo logins are created in Authentication > Users, with "Auto Confirm User": `dispatcher@example.com`, `north.crew@example.com`, `south.crew@example.com`. Passwords are never committed.
+- Guide: "Migrations and Seeds: A Guide for SQL-First Developers" (Claude doc, also in the personal knowledge base).
+
+## Open questions
+
+Decide these before the step that needs them. Until then, do not build either behavior.
+
+- Does the dispatcher board show unassigned jobs, and where? (Step 5)
+- Can the dispatcher move a job backwards, for example `done` → `on_site`? The database allows it today. (Step 6)
+- Can a crew undo a status tap made by mistake? The function does not allow it today. (Step 7)
+- What does the crew day view show to a crew login that has no crew assigned yet? (Step 7)
 
 ## Realtime
 
