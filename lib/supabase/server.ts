@@ -1,11 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import type { Database } from "@/lib/database.types";
 import { publicEnv } from "@/lib/env";
 
 export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient(
+  return createServerClient<Database>(
     publicEnv.NEXT_PUBLIC_SUPABASE_URL,
     publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
@@ -19,8 +20,8 @@ export async function createClient() {
               cookieStore.set(name, value, options),
             );
           } catch {
-            // Server Components cannot set cookies. Safe to ignore once the
-            // session-refresh proxy (Step 4) keeps the auth cookie fresh.
+            // Server Components cannot set cookies. Safe to ignore: proxy.ts
+            // refreshes the auth cookie before any page renders.
           }
         },
       },
