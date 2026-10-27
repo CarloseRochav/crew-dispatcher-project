@@ -52,9 +52,10 @@ export function JobDrawer({ content, crews, filters }: JobDrawerProps) {
               </SheetTitle>
               <SheetDescription>Edit the job and save. Times are on the Tijuana clock.</SheetDescription>
             </SheetHeader>
-            {/* A new key after every save, so the form starts from the saved values. */}
+            {/* Keyed by id, not updated_at: a live refresh must not wipe what the dispatcher is typing.
+                A save closes the drawer, so the next open starts from the saved values. */}
             <JobForm
-              key={content.job.updated_at}
+              key={content.job.id}
               job={content.job}
               crews={crews}
               filters={filters}

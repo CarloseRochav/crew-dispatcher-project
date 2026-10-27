@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useTransition, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { boardHref, NEW_JOB, type BoardFilters } from "@/lib/jobs/board-filters";
 import type { Crew } from "@/lib/jobs/queries";
@@ -16,6 +16,8 @@ type BoardFiltersBarProps = {
   previousDate: string;
   nextDate: string;
   dayLabel: string;
+  // Shown at the end of the bar: the live connection indicator.
+  children?: ReactNode;
 };
 
 const fieldClassName =
@@ -28,6 +30,7 @@ export function BoardFiltersBar({
   previousDate,
   nextDate,
   dayLabel,
+  children,
 }: BoardFiltersBarProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -97,6 +100,8 @@ export function BoardFiltersBar({
           New job
         </Link>
       </Button>
+
+      {children}
     </div>
   );
 }

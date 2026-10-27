@@ -9,6 +9,7 @@ import { JOB_STATUSES } from "@/lib/jobs/status";
 import { BoardColumn } from "./board-column";
 import { BoardFiltersBar } from "./board-filters";
 import { JobDrawer, type DrawerContent } from "./job-drawer";
+import { LiveBoardUpdates } from "./live-board-updates";
 
 export const metadata: Metadata = {
   title: "Dispatch board · Crew Dispatch",
@@ -48,7 +49,9 @@ async function DispatcherBoard({ searchParams }: Pick<PageProps<"/board">, "sear
         previousDate={addDays(filters.date, -1)}
         nextDate={addDays(filters.date, 1)}
         dayLabel={formatDayLabel(filters.date)}
-      />
+      >
+        <LiveBoardUpdates />
+      </BoardFiltersBar>
       <main className="flex-1 p-4">
         {jobs.length === 0 ? (
           <p className="rounded-lg border border-border bg-surface p-6 text-center text-muted-foreground">

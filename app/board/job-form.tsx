@@ -1,7 +1,7 @@
 "use client";
 
-import { CircleAlert } from "lucide-react";
-import { useActionState, useTransition, type FormEvent, type ReactNode } from "react";
+import { CircleAlert, Info } from "lucide-react";
+import { useActionState, useState, useTransition, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +52,12 @@ function startingValues(job: JobDetails | null, filters: BoardFilters) {
   };
 }
 
-export function JobForm({ job, crews, filters, onCancel }: JobFormProps) {
+export function JobForm({ job: latestJob, crews, filters, onCancel }: JobFormProps) {
+  // The version the dispatcher opened. Live refreshes pass newer versions in as
+  // latestJob, but the form keeps this one: the save must still be checked
+  // against what the dispatcher saw, or a crew's change would be overwritten.
+  const [job] = useState(latestJob);
+  const changedWhileEditing = Boolean(job && latestJob && latestJob.updated_at !== job.updated_at);
   // The drawer remounts the form when switching between new and edit, so the action never changes.
   const [state, formAction] = useActionState(job ? updateJob : createJob, initialState);
   const [pending, startTransition] = useTransition();
@@ -68,6 +73,15 @@ export function JobForm({ job, crews, filters, onCancel }: JobFormProps) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-1 flex-col gap-4 px-4 pb-4">
+      {changedWhileEditing && latestJob && (
+        <p role="status" className="flex gap-2 rounded-lg border border-border bg-muted p-3 text-sm text-ink">
+          <Info aria-hidden className="mt-0.5 size-4 shrink-0" />
+          <span>
+            This job was changed while you were editing (status now: {JOB_STATUS_LABELS[latestJob.status]}).
+            Saving will be refused. Close and reopen to see the latest.
+          </span>
+        </p>
+      )}
       {job && (
         <>
           <input type="hidden" name="jobId" value={job.id} />
