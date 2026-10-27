@@ -1,3 +1,4 @@
+import type { BoardFilters } from "@/lib/jobs/board-filters";
 import { JOB_STATUS_LABELS, type JobStatus } from "@/lib/jobs/status";
 import type { BoardJob } from "@/lib/jobs/queries";
 import { JobCard } from "./job-card";
@@ -11,9 +12,10 @@ const EMPTY_MESSAGES: Record<JobStatus, string> = {
 type BoardColumnProps = {
   status: JobStatus;
   jobs: BoardJob[];
+  filters: BoardFilters;
 };
 
-export function BoardColumn({ status, jobs }: BoardColumnProps) {
+export function BoardColumn({ status, jobs, filters }: BoardColumnProps) {
   const headingId = `column-${status}`;
 
   return (
@@ -28,7 +30,7 @@ export function BoardColumn({ status, jobs }: BoardColumnProps) {
         <ul className="flex flex-col gap-2">
           {jobs.map((job) => (
             <li key={job.id}>
-              <JobCard job={job} />
+              <JobCard job={job} filters={filters} />
             </li>
           ))}
         </ul>

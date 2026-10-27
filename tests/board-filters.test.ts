@@ -1,5 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { boardHref, parseBoardFilters } from "@/lib/jobs/board-filters";
+import { boardHref, parseBoardFilters, parseOpenJobId } from "@/lib/jobs/board-filters";
+
+describe("parseOpenJobId", () => {
+  const jobId = "a0000000-0000-4000-8000-000000000001";
+
+  it("reads a job id from the URL", () => {
+    expect(parseOpenJobId({ job: jobId })).toBe(jobId);
+  });
+
+  it.each([
+    ["no job", {}],
+    ["a malformed id", { job: "not-a-uuid" }],
+  ])("opens nothing for %s", (_case, searchParams) => {
+    expect(parseOpenJobId(searchParams)).toBeNull();
+  });
+
+  it("adds the open job to the board link", () => {
+    expect(boardHref({ date: "2026-10-22", crew: "all" }, jobId)).toBe(
+      `/board?date=2026-10-22&crew=all&job=${jobId}`,
+    );
+  });
+});
 
 const today = "2026-10-22";
 const northCrewId = "c0000000-0000-4000-8000-000000000001";

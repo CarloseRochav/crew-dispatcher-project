@@ -25,6 +25,23 @@ export async function getBoardJobs({ date, crew }: BoardFilters) {
 
 export type BoardJob = Awaited<ReturnType<typeof getBoardJobs>>[number];
 
+const JOB_DETAIL_COLUMNS =
+  "id, customer_name, address, job_type, scheduled_for, status, crew_id, notes, updated_at";
+
+// null when the job does not exist or RLS hides it; the drawer says so.
+export async function getJob(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("jobs")
+    .select(JOB_DETAIL_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export type JobDetails = NonNullable<Awaited<ReturnType<typeof getJob>>>;
+
 export async function getCrews() {
   const supabase = await createClient();
   const { data, error } = await supabase.from("crews").select("id, name").order("name");

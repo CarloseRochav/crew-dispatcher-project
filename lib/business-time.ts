@@ -9,6 +9,14 @@ const isoDateFormatter = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
+// HH:mm, the value format of <input type="time">.
+const isoTimeFormatter = new Intl.DateTimeFormat("en-GB", {
+  timeZone: BUSINESS_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
 const offsetFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: BUSINESS_TIME_ZONE,
   timeZoneName: "longOffset",
@@ -59,12 +67,31 @@ export function addDays(date: string, days: number) {
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
+// wallClockMs: the business-clock reading written as if it were UTC.
+function instantOfWallClock(wallClockMs: number) {
+  const firstGuess = wallClockMs - offsetMinutesAt(new Date(wallClockMs)) * MINUTE_MS;
+  // Re-check at the guessed instant in case the offset differs there.
+  return new Date(wallClockMs - offsetMinutesAt(new Date(firstGuess)) * MINUTE_MS);
+}
+
+// Midnight always exists in Tijuana: the clocks change at 2:00.
 function startOfBusinessDay(date: string) {
   const { year, month, day } = parseIsoDate(date);
-  const utcMidnight = Date.UTC(year, month - 1, day);
-  const firstGuess = utcMidnight - offsetMinutesAt(new Date(utcMidnight)) * MINUTE_MS;
-  // Re-check at the guessed instant in case the offset differs there.
-  return new Date(utcMidnight - offsetMinutesAt(new Date(firstGuess)) * MINUTE_MS);
+  return instantOfWallClock(Date.UTC(year, month - 1, day));
+}
+
+export function businessDateTimeOf(instant: Date) {
+  return { date: businessDateOf(instant), time: isoTimeFormatter.format(instant) };
+}
+
+// null when the time is skipped by a spring-forward change (2:00–2:59).
+// A fall-back time that happens twice resolves to the first one.
+export function businessInstant(date: string, time: string) {
+  const { year, month, day } = parseIsoDate(date);
+  const [hour, minute] = time.split(":").map(Number);
+  const instant = instantOfWallClock(Date.UTC(year, month - 1, day, hour, minute));
+  const roundTrip = businessDateTimeOf(instant);
+  return roundTrip.date === date && roundTrip.time === time ? instant : null;
 }
 
 // Half-open range [start, end) in UTC; a day is 23 or 25 hours on a clock change.

@@ -3,11 +3,12 @@ import { Suspense } from "react";
 import { SignedInHeader } from "@/components/signed-in-header";
 import { requireRole } from "@/lib/auth";
 import { addDays, formatDayLabel, todayInBusinessZone } from "@/lib/business-time";
-import { parseBoardFilters } from "@/lib/jobs/board-filters";
-import { getBoardJobs, getCrews } from "@/lib/jobs/queries";
+import { parseBoardFilters, parseOpenJobId } from "@/lib/jobs/board-filters";
+import { getBoardJobs, getCrews, getJob } from "@/lib/jobs/queries";
 import { JOB_STATUSES } from "@/lib/jobs/status";
 import { BoardColumn } from "./board-column";
 import { BoardFiltersBar } from "./board-filters";
+import { JobDrawer } from "./job-drawer";
 
 export const metadata: Metadata = {
   title: "Dispatch board · Crew Dispatch",
@@ -25,8 +26,14 @@ async function DispatcherBoard({ searchParams }: Pick<PageProps<"/board">, "sear
   // requireRole awaits connection(), so reading the clock below uses the request's time.
   const dispatcher = await requireRole("dispatcher");
   const today = todayInBusinessZone();
-  const filters = parseBoardFilters(await searchParams, today);
-  const [jobs, crews] = await Promise.all([getBoardJobs(filters), getCrews()]);
+  const params = await searchParams;
+  const filters = parseBoardFilters(params, today);
+  const openJobId = parseOpenJobId(params);
+  const [jobs, crews, openJob] = await Promise.all([
+    getBoardJobs(filters),
+    getCrews(),
+    openJobId ? getJob(openJobId) : null,
+  ]);
 
   return (
     <>
@@ -51,11 +58,13 @@ async function DispatcherBoard({ searchParams }: Pick<PageProps<"/board">, "sear
                 key={status}
                 status={status}
                 jobs={jobs.filter((job) => job.status === status)}
+                filters={filters}
               />
             ))}
           </div>
         )}
       </main>
+      {openJobId && <JobDrawer job={openJob} crews={crews} filters={filters} />}
     </>
   );
 }

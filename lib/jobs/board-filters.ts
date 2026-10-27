@@ -27,6 +27,14 @@ export function parseBoardFilters(searchParams: SearchParams, today: string): Bo
   };
 }
 
-export function boardHref(filters: BoardFilters) {
-  return `/board?${new URLSearchParams(filters).toString()}`;
+// The job open in the drawer; anything that is not a uuid opens nothing.
+export function parseOpenJobId(searchParams: SearchParams) {
+  const jobId = z.uuid().safeParse(firstValue(searchParams.job));
+  return jobId.success ? jobId.data : null;
+}
+
+export function boardHref(filters: BoardFilters, jobId?: string) {
+  const params = new URLSearchParams(filters);
+  if (jobId) params.set("job", jobId);
+  return `/board?${params.toString()}`;
 }

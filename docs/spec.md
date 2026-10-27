@@ -83,7 +83,7 @@ Crew status changes through `update_job_status`:
 Decide these before the step that needs them. Until then, do not build either behavior.
 
 - ~~Does the dispatcher board show unassigned jobs, and where? (Step 5)~~ Decided in Step 5: yes, through the crew filter. "All crews" includes them (the card says "Unassigned"); the "Unassigned" option shows only them. No fourth column.
-- Can the dispatcher move a job backwards, for example `done` → `on_site`? The database allows it today. (Step 6)
+- ~~Can the dispatcher move a job backwards, for example `done` → `on_site`? (Step 6)~~ Decided in Step 6: yes. The dispatcher can set any status from the job drawer, to fix mistakes. Crews stay forward-only through `update_job_status`.
 - Can a crew undo a status tap made by mistake? The function does not allow it today. (Step 7)
 - What does the crew day view show to a crew login that has no crew assigned yet? (Step 7)
 
