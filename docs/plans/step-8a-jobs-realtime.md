@@ -29,7 +29,7 @@ Changes to `jobs` are sent over Supabase Realtime, and each subscriber only hear
 
 - Before `db push`: 2 failed, 1 passed — no events reached the dispatcher or North; anon heard nothing.
 - First full run after `db push`: 2 failed.
-  - Realtime "dispatcher hears every change" got no events, seconds after the push. Three runs in a row afterwards passed; most likely Realtime had not yet picked up the publication change.
+  - Realtime "dispatcher hears every change" got no events, seconds after the push. Three runs in a row afterwards passed. I blamed Realtime not yet picking up the publication change; wrong: it failed again during Step 8b with no database change. Real cause: the listener sometimes starts streaming more than the fixed 1s after `SUBSCRIBED`. Fixed after 8b with a warm-up (see `docs/ai-log.md`).
   - The 7a undo test got `22023`: manual 7b checks had left North's 10:30 job on Done, and the tests only restored statuses after each test. Fixed by also resetting before each test; reproduced by setting that job to Done, then 20/20 passed.
 - Final run: all 98 tests passed.
 

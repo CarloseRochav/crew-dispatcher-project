@@ -39,7 +39,28 @@ type JobListener = {
   channel: RealtimeChannel;
 };
 
-async function listenToJobUpdates(client: TestClient): Promise<JobListener> {
+// SUBSCRIBED can arrive seconds before the server starts streaming changes,
+// longest on the first connection of a run. A fixed delay only guesses; this
+// touches a job the listener may read until an event proves the stream works.
+const WARM_UP_RETOUCH_MS = 2000;
+const WARM_UP_TIMEOUT_MS = 10_000;
+
+async function warmUp(listener: JobListener, jobId: string) {
+  const deadline = Date.now() + WARM_UP_TIMEOUT_MS;
+  while (!listener.jobIds.includes(jobId)) {
+    if (Date.now() >= deadline) {
+      throw new Error(`Warm-up: never heard the change to job ${jobId}; Realtime is not streaming.`);
+    }
+    await touchJobAsDispatcher(jobId);
+    const retouchAt = Math.min(Date.now() + WARM_UP_RETOUCH_MS, deadline);
+    while (!listener.jobIds.includes(jobId) && Date.now() < retouchAt) await delay(100);
+  }
+  // The tests only see events from after the warm-up.
+  listener.jobIds.length = 0;
+}
+
+// warmUpJobId: a job this client may read. Omit it for a client that should hear nothing.
+async function listenToJobUpdates(client: TestClient, warmUpJobId?: string): Promise<JobListener> {
   // Sends the current session token (or the anon key) before joining.
   await client.realtime.setAuth();
   const listener: JobListener = { jobIds: [], channel: client.channel(`rls-test-${crypto.randomUUID()}`) };
@@ -55,8 +76,9 @@ async function listenToJobUpdates(client: TestClient): Promise<JobListener> {
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") reject(error ?? new Error(status));
     });
   });
-  // SUBSCRIBED can arrive just before the server starts streaming changes.
-  await delay(1000);
+  if (warmUpJobId) await warmUp(listener, warmUpJobId);
+  // Nothing can prove a stream that must stay silent is ready; give it the old fixed wait.
+  else await delay(1000);
   return listener;
 }
 
@@ -83,7 +105,7 @@ async function waitForJob(listener: JobListener, id: string) {
 
 describe("Realtime respects the jobs RLS policies", () => {
   it("the dispatcher hears changes to every crew's jobs", async () => {
-    const listener = await listenToJobUpdates(dispatcher);
+    const listener = await listenToJobUpdates(dispatcher, jobIds.northScheduled);
 
     await touchJobAsDispatcher(jobIds.southScheduled);
     await touchJobAsDispatcher(jobIds.northScheduled);
@@ -94,7 +116,7 @@ describe("Realtime respects the jobs RLS policies", () => {
   });
 
   it("a crew hears changes to its own jobs only", async () => {
-    const listener = await listenToJobUpdates(northCrew);
+    const listener = await listenToJobUpdates(northCrew, jobIds.northScheduled);
 
     // South first: events arrive in order, so a leaked South event would come before North's.
     await touchJobAsDispatcher(jobIds.southScheduled);
