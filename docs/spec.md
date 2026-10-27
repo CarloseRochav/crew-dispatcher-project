@@ -66,7 +66,7 @@ Data rules (enforced in the database):
 
 Crew status changes through `update_job_status`:
 
-- Forward only, one step at a time: `scheduled` → `on_site` → `done`. Sending the current status again is allowed, to add a note without moving the job.
+- One step at a time, forward or back: `scheduled` ↔ `on_site` ↔ `done`, so a crew can undo a mistaken tap. No jumps (`scheduled` ↔ `done`). No time limit. Sending the current status again is allowed, to add a note without moving the job.
 - A crew note is appended to the job's notes on a new line. It never replaces what the dispatcher wrote. Max 1000 characters.
 - A job that doesn't exist and a job from another crew return the same "Job not found" error, so a crew cannot discover other crews' job ids.
 
@@ -83,9 +83,9 @@ Crew status changes through `update_job_status`:
 Decide these before the step that needs them. Until then, do not build either behavior.
 
 - ~~Does the dispatcher board show unassigned jobs, and where? (Step 5)~~ Decided in Step 5: yes, through the crew filter. "All crews" includes them (the card says "Unassigned"); the "Unassigned" option shows only them. No fourth column.
-- ~~Can the dispatcher move a job backwards, for example `done` → `on_site`? (Step 6)~~ Decided in Step 6: yes. The dispatcher can set any status from the job drawer, to fix mistakes. Crews stay forward-only through `update_job_status`.
-- Can a crew undo a status tap made by mistake? The function does not allow it today. (Step 7)
-- What does the crew day view show to a crew login that has no crew assigned yet? (Step 7)
+- ~~Can the dispatcher move a job backwards, for example `done` → `on_site`? (Step 6)~~ Decided in Step 6: yes. The dispatcher can set any status from the job drawer, to fix mistakes. Crews go through `update_job_status`, one step at a time.
+- ~~Can a crew undo a status tap made by mistake? (Step 7)~~ Decided in Step 7: yes, one step back (`done` → `on_site` → `scheduled`), through `update_job_status` (migration `allow_crew_status_undo`). No time limit for now: the day view only shows today's jobs.
+- ~~What does the crew day view show to a crew login that has no crew assigned yet? (Step 7)~~ Decided in Step 7: a message, "You're not on a crew yet. Ask the dispatcher to add you." No jobs, no buttons.
 
 ## Realtime
 

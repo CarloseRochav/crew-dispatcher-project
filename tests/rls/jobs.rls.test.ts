@@ -1,4 +1,5 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import type { JobStatus } from "@/lib/jobs/status";
 import {
   anonClient,
   crewIds,
@@ -103,6 +104,68 @@ describe("a crew cannot edit another crew's job", () => {
     expect(error?.code).toBe("P0002");
     expect(error?.message).toBe("Job not found");
     expect(await readJobAsDispatcher(jobIds.southScheduled)).toEqual(before);
+  });
+});
+
+describe("a crew can undo one status step on its own job (Step 7 decision)", () => {
+  // These tests move seeded jobs; put them back so other tests and the demo see the seed.
+  const seedStatuses: [string, JobStatus][] = [
+    [jobIds.northDone, "done"],
+    [jobIds.northOnSite, "on_site"],
+    [jobIds.northScheduled, "scheduled"],
+    [jobIds.southOnSite, "on_site"],
+  ];
+
+  afterEach(async () => {
+    const results = await Promise.all(
+      seedStatuses.map(([id, status]) =>
+        dispatcher.from("jobs").update({ status }).eq("id", id).neq("status", status),
+      ),
+    );
+    for (const { error } of results) if (error) throw error;
+  });
+
+  async function moveAsNorthCrew(id: string, status: JobStatus) {
+    return northCrew.rpc("update_job_status", { p_job_id: id, p_new_status: status });
+  }
+
+  it("moves an on-site job back to scheduled, then forward again", async () => {
+    const back = await moveAsNorthCrew(jobIds.northOnSite, "scheduled");
+    expect(back.error).toBeNull();
+    expect(back.data?.status).toBe("scheduled");
+
+    const forward = await moveAsNorthCrew(jobIds.northOnSite, "on_site");
+    expect(forward.error).toBeNull();
+    expect(forward.data?.status).toBe("on_site");
+  });
+
+  it("moves a done job back to on site", async () => {
+    const { data, error } = await moveAsNorthCrew(jobIds.northDone, "on_site");
+
+    expect(error).toBeNull();
+    expect(data?.status).toBe("on_site");
+  });
+
+  it.each<[JobStatus, JobStatus, string]>([
+    ["done", "scheduled", jobIds.northDone],
+    ["scheduled", "done", jobIds.northScheduled],
+  ])("refuses a jump from %s to %s", async (_from, to, id) => {
+    const before = await readJobAsDispatcher(id);
+
+    const { error } = await moveAsNorthCrew(id, to);
+
+    expect(error?.code).toBe("22023");
+    expect(await readJobAsDispatcher(id)).toEqual(before);
+  });
+
+  it("cannot undo another crew's job", async () => {
+    const before = await readJobAsDispatcher(jobIds.southOnSite);
+
+    const { error } = await moveAsNorthCrew(jobIds.southOnSite, "scheduled");
+
+    expect(error?.code).toBe("P0002");
+    expect(error?.message).toBe("Job not found");
+    expect(await readJobAsDispatcher(jobIds.southOnSite)).toEqual(before);
   });
 });
 
