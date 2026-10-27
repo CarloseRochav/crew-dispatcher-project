@@ -14,32 +14,52 @@ import { boardHref, type BoardFilters } from "@/lib/jobs/board-filters";
 import type { Crew, JobDetails } from "@/lib/jobs/queries";
 import { JobForm } from "./job-form";
 
+export type DrawerContent =
+  | { mode: "create" }
+  // job null: the URL names a job that does not exist (or is hidden by RLS).
+  | { mode: "edit"; job: JobDetails | null };
+
 type JobDrawerProps = {
-  // null: the URL names a job that does not exist (or is hidden by RLS).
-  job: JobDetails | null;
+  content: DrawerContent;
   crews: Crew[];
   filters: BoardFilters;
 };
 
 // Open while the URL has ?job=; closing removes it and keeps the board's filters.
-export function JobDrawer({ job, crews, filters }: JobDrawerProps) {
+export function JobDrawer({ content, crews, filters }: JobDrawerProps) {
   const router = useRouter();
   const close = () => router.push(boardHref(filters), { scroll: false });
 
   return (
     <Sheet open onOpenChange={(open) => !open && close()}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
-        {job ? (
+        {content.mode === "create" ? (
+          <>
+            <SheetHeader className="pr-12">
+              <SheetTitle className="text-lg text-ink">New job</SheetTitle>
+              <SheetDescription>
+                Fill in the job and pick a time. It starts as Scheduled. Times are on the Tijuana clock.
+              </SheetDescription>
+            </SheetHeader>
+            <JobForm key="new" job={null} crews={crews} filters={filters} onCancel={close} />
+          </>
+        ) : content.job ? (
           <>
             <SheetHeader className="pr-12">
               <SheetTitle className="flex items-center gap-2 text-lg text-ink">
-                <span className="truncate">{job.customer_name}</span>
-                <JobStatusBadge status={job.status} />
+                <span className="truncate">{content.job.customer_name}</span>
+                <JobStatusBadge status={content.job.status} />
               </SheetTitle>
               <SheetDescription>Edit the job and save. Times are on the Tijuana clock.</SheetDescription>
             </SheetHeader>
             {/* A new key after every save, so the form starts from the saved values. */}
-            <JobForm key={job.updated_at} job={job} crews={crews} filters={filters} onCancel={close} />
+            <JobForm
+              key={content.job.updated_at}
+              job={content.job}
+              crews={crews}
+              filters={filters}
+              onCancel={close}
+            />
           </>
         ) : (
           <>

@@ -1,5 +1,37 @@
 import { describe, expect, it } from "vitest";
-import { boardHref, parseBoardFilters, parseOpenJobId } from "@/lib/jobs/board-filters";
+import {
+  boardAfterCreate,
+  boardHref,
+  parseBoardFilters,
+  parseOpenJobId,
+} from "@/lib/jobs/board-filters";
+
+describe("boardAfterCreate", () => {
+  const northCrewId = "c0000000-0000-4000-8000-000000000001";
+  const southCrewId = "c0000000-0000-4000-8000-000000000002";
+  const newJob = { date: "2026-10-23", crewId: southCrewId };
+
+  it("switches another crew's filter to the new job's crew and day", () => {
+    expect(boardAfterCreate({ date: "2026-10-22", crew: northCrewId }, newJob)).toEqual({
+      date: "2026-10-23",
+      crew: southCrewId,
+    });
+  });
+
+  it("switches to Unassigned for a job created without a crew", () => {
+    expect(boardAfterCreate({ date: "2026-10-22", crew: northCrewId }, { ...newJob, crewId: null }).crew).toBe(
+      "unassigned",
+    );
+  });
+
+  it("switches the Unassigned filter to the new job's crew", () => {
+    expect(boardAfterCreate({ date: "2026-10-22", crew: "unassigned" }, newJob).crew).toBe(southCrewId);
+  });
+
+  it("keeps All crews, which already shows the new job", () => {
+    expect(boardAfterCreate({ date: "2026-10-22", crew: "all" }, newJob).crew).toBe("all");
+  });
+});
 
 describe("parseOpenJobId", () => {
   const jobId = "a0000000-0000-4000-8000-000000000001";
@@ -8,8 +40,13 @@ describe("parseOpenJobId", () => {
     expect(parseOpenJobId({ job: jobId })).toBe(jobId);
   });
 
+  it("reads the New job drawer from the URL", () => {
+    expect(parseOpenJobId({ job: "new" })).toBe("new");
+  });
+
   it.each([
     ["no job", {}],
+    ["a near miss of new", { job: "New" }],
     ["a malformed id", { job: "not-a-uuid" }],
   ])("opens nothing for %s", (_case, searchParams) => {
     expect(parseOpenJobId(searchParams)).toBeNull();

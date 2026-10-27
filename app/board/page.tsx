@@ -3,12 +3,12 @@ import { Suspense } from "react";
 import { SignedInHeader } from "@/components/signed-in-header";
 import { requireRole } from "@/lib/auth";
 import { addDays, formatDayLabel, todayInBusinessZone } from "@/lib/business-time";
-import { parseBoardFilters, parseOpenJobId } from "@/lib/jobs/board-filters";
+import { NEW_JOB, parseBoardFilters, parseOpenJobId } from "@/lib/jobs/board-filters";
 import { getBoardJobs, getCrews, getJob } from "@/lib/jobs/queries";
 import { JOB_STATUSES } from "@/lib/jobs/status";
 import { BoardColumn } from "./board-column";
 import { BoardFiltersBar } from "./board-filters";
-import { JobDrawer } from "./job-drawer";
+import { JobDrawer, type DrawerContent } from "./job-drawer";
 
 export const metadata: Metadata = {
   title: "Dispatch board · Crew Dispatch",
@@ -29,11 +29,14 @@ async function DispatcherBoard({ searchParams }: Pick<PageProps<"/board">, "sear
   const params = await searchParams;
   const filters = parseBoardFilters(params, today);
   const openJobId = parseOpenJobId(params);
-  const [jobs, crews, openJob] = await Promise.all([
+  const editingJobId = openJobId && openJobId !== NEW_JOB ? openJobId : null;
+  const [jobs, crews, editingJob] = await Promise.all([
     getBoardJobs(filters),
     getCrews(),
-    openJobId ? getJob(openJobId) : null,
+    editingJobId ? getJob(editingJobId) : null,
   ]);
+  const drawer: DrawerContent | null =
+    openJobId === NEW_JOB ? { mode: "create" } : editingJobId ? { mode: "edit", job: editingJob } : null;
 
   return (
     <>
@@ -64,7 +67,7 @@ async function DispatcherBoard({ searchParams }: Pick<PageProps<"/board">, "sear
           </div>
         )}
       </main>
-      {openJobId && <JobDrawer job={openJob} crews={crews} filters={filters} />}
+      {drawer && <JobDrawer content={drawer} crews={crews} filters={filters} />}
     </>
   );
 }

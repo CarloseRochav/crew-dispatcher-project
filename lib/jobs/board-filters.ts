@@ -5,6 +5,8 @@ const crewSchema = z.union([z.literal("all"), z.literal("unassigned"), z.uuid()]
 
 export type CrewFilter = z.infer<typeof crewSchema>;
 
+export const NEW_JOB = "new";
+
 export type BoardFilters = {
   date: string;
   crew: CrewFilter;
@@ -27,10 +29,20 @@ export function parseBoardFilters(searchParams: SearchParams, today: string): Bo
   };
 }
 
-// The job open in the drawer; anything that is not a uuid opens nothing.
+// What the drawer shows: a job id, or "new" for the create form.
+const openJobSchema = z.union([z.literal(NEW_JOB), z.uuid()]);
+
+// Anything else in ?job= opens nothing.
 export function parseOpenJobId(searchParams: SearchParams) {
-  const jobId = z.uuid().safeParse(firstValue(searchParams.job));
+  const jobId = openJobSchema.safeParse(firstValue(searchParams.job));
   return jobId.success ? jobId.data : null;
+}
+
+// After creating a job, show its day and make sure the filter lets it through:
+// "All crews" already does; a narrower filter switches to the job's crew.
+export function boardAfterCreate(filters: BoardFilters, job: { date: string; crewId: string | null }) {
+  const crew = filters.crew === "all" ? "all" : (job.crewId ?? "unassigned");
+  return { date: job.date, crew } satisfies BoardFilters;
 }
 
 export function boardHref(filters: BoardFilters, jobId?: string) {

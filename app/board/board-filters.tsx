@@ -1,11 +1,11 @@
 "use client";
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { boardHref, type BoardFilters } from "@/lib/jobs/board-filters";
+import { boardHref, NEW_JOB, type BoardFilters } from "@/lib/jobs/board-filters";
 import type { Crew } from "@/lib/jobs/queries";
 
 type BoardFiltersBarProps = {
@@ -90,6 +90,13 @@ export function BoardFiltersBar({
           ))}
         </select>
       </div>
+
+      <Button asChild size="lg">
+        <Link href={boardHref(filters, NEW_JOB)} scroll={false}>
+          <Plus aria-hidden />
+          New job
+        </Link>
+      </Button>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { jobFormErrors, jobUpdateSchema } from "@/lib/jobs/job-form";
+import { jobCreateSchema, jobFormErrors, jobUpdateSchema } from "@/lib/jobs/job-form";
 
 const northCrewId = "c0000000-0000-4000-8000-000000000001";
 
@@ -16,11 +16,59 @@ const validForm = {
   notes: "Gate code 2291.",
 };
 
-function fieldErrorsFor(input: Record<string, unknown>) {
-  const result = jobUpdateSchema.safeParse(input);
+function fieldErrorsFor(
+  input: Record<string, unknown>,
+  schema: typeof jobUpdateSchema | typeof jobCreateSchema = jobUpdateSchema,
+) {
+  const result = schema.safeParse(input);
   if (result.success) throw new Error("expected the form to be rejected");
   return jobFormErrors(result.error).fieldErrors;
 }
+
+// What the New job form sends: no id, version or status.
+const newJobForm = {
+  customerName: validForm.customerName,
+  address: validForm.address,
+  jobType: validForm.jobType,
+  date: validForm.date,
+  time: validForm.time,
+  crewId: validForm.crewId,
+  notes: validForm.notes,
+};
+
+describe("jobCreateSchema", () => {
+  it("turns a valid form into a jobs insert, without a status", () => {
+    expect(jobCreateSchema.parse(newJobForm)).toEqual({
+      date: "2026-10-22",
+      insert: {
+        customer_name: "Rosa Delgado",
+        address: "1420 Calle Ocho",
+        job_type: "Water heater install",
+        scheduled_for: "2026-10-22T21:30:00.000Z",
+        crew_id: northCrewId,
+        notes: "Gate code 2291.",
+      },
+    });
+  });
+
+  // A new job is always scheduled: a status sent by a tampered form is dropped.
+  it("ignores a status in the form", () => {
+    expect(jobCreateSchema.parse({ ...newJobForm, status: "done" }).insert).not.toHaveProperty("status");
+  });
+
+  // The time field starts empty on purpose (Step 6b decision).
+  it("asks for a time when the field is left empty", () => {
+    expect(fieldErrorsFor({ ...newJobForm, time: "" }, jobCreateSchema).time).toEqual(["Pick a time"]);
+  });
+
+  it("uses the same rules as the edit form", () => {
+    const errors = fieldErrorsFor(
+      { ...newJobForm, customerName: " ", crewId: "north" },
+      jobCreateSchema,
+    );
+    expect(Object.keys(errors).sort()).toEqual(["crewId", "customerName"]);
+  });
+});
 
 describe("jobUpdateSchema", () => {
   it("turns a valid form into a jobs update on the Tijuana clock", () => {

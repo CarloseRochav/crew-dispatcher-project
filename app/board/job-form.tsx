@@ -11,7 +11,7 @@ import type { BoardFilters } from "@/lib/jobs/board-filters";
 import type { JobFormField } from "@/lib/jobs/job-form";
 import type { Crew, JobDetails } from "@/lib/jobs/queries";
 import { JOB_STATUSES, JOB_STATUS_LABELS } from "@/lib/jobs/status";
-import { updateJob, type JobFormState } from "./actions";
+import { createJob, updateJob, type JobFormState } from "./actions";
 
 const initialState: JobFormState = { error: null };
 
@@ -19,17 +19,44 @@ const selectClassName =
   "h-9 w-full rounded-lg border border-input bg-surface px-2 text-ink outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive";
 
 type JobFormProps = {
-  job: JobDetails;
+  // null: a new job.
+  job: JobDetails | null;
   crews: Crew[];
-  // Where to go back to after saving.
+  // The board view to go back to after saving; a new job also starts from it.
   filters: BoardFilters;
   onCancel: () => void;
 };
 
+// A new job starts on the day and crew the dispatcher is looking at. The time
+// starts empty on purpose, so nobody books a job at a time they did not choose.
+function startingValues(job: JobDetails | null, filters: BoardFilters) {
+  if (job) {
+    return {
+      ...businessDateTimeOf(new Date(job.scheduled_for)),
+      customerName: job.customer_name,
+      address: job.address,
+      jobType: job.job_type,
+      crewId: job.crew_id ?? "",
+      notes: job.notes,
+    };
+  }
+  const oneCrew = filters.crew !== "all" && filters.crew !== "unassigned";
+  return {
+    date: filters.date,
+    time: "",
+    customerName: "",
+    address: "",
+    jobType: "",
+    crewId: oneCrew ? filters.crew : "",
+    notes: "",
+  };
+}
+
 export function JobForm({ job, crews, filters, onCancel }: JobFormProps) {
-  const [state, formAction] = useActionState(updateJob, initialState);
+  // The drawer remounts the form when switching between new and edit, so the action never changes.
+  const [state, formAction] = useActionState(job ? updateJob : createJob, initialState);
   const [pending, startTransition] = useTransition();
-  const scheduled = businessDateTimeOf(new Date(job.scheduled_for));
+  const values = startingValues(job, filters);
   const errors = state.fieldErrors ?? {};
 
   // Submitting by hand skips React's automatic form reset, so a failed save keeps the edits.
@@ -41,33 +68,37 @@ export function JobForm({ job, crews, filters, onCancel }: JobFormProps) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-1 flex-col gap-4 px-4 pb-4">
-      <input type="hidden" name="jobId" value={job.id} />
-      <input type="hidden" name="updatedAt" value={job.updated_at} />
+      {job && (
+        <>
+          <input type="hidden" name="jobId" value={job.id} />
+          <input type="hidden" name="updatedAt" value={job.updated_at} />
+        </>
+      )}
       <input type="hidden" name="returnDate" value={filters.date} />
       <input type="hidden" name="returnCrew" value={filters.crew} />
 
       <Field name="customerName" label="Customer" errors={errors.customerName}>
-        <Input {...fieldProps("customerName", errors)} defaultValue={job.customer_name} />
+        <Input {...fieldProps("customerName", errors)} defaultValue={values.customerName} />
       </Field>
       <Field name="address" label="Address" errors={errors.address}>
-        <Input {...fieldProps("address", errors)} defaultValue={job.address} />
+        <Input {...fieldProps("address", errors)} defaultValue={values.address} />
       </Field>
       <Field name="jobType" label="Job type" errors={errors.jobType}>
-        <Input {...fieldProps("jobType", errors)} defaultValue={job.job_type} />
+        <Input {...fieldProps("jobType", errors)} defaultValue={values.jobType} />
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
         <Field name="date" label="Date" errors={errors.date}>
-          <Input {...fieldProps("date", errors)} type="date" defaultValue={scheduled.date} />
+          <Input {...fieldProps("date", errors)} type="date" defaultValue={values.date} />
         </Field>
         <Field name="time" label="Time (Tijuana)" errors={errors.time}>
-          <Input {...fieldProps("time", errors)} type="time" defaultValue={scheduled.time} />
+          <Input {...fieldProps("time", errors)} type="time" defaultValue={values.time} />
         </Field>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Field name="crewId" label="Crew" errors={errors.crewId}>
-          <select {...fieldProps("crewId", errors)} defaultValue={job.crew_id ?? ""} className={selectClassName}>
+          <select {...fieldProps("crewId", errors)} defaultValue={values.crewId} className={selectClassName}>
             <option value="">Unassigned</option>
             {crews.map((crew) => (
               <option key={crew.id} value={crew.id}>
@@ -76,19 +107,22 @@ export function JobForm({ job, crews, filters, onCancel }: JobFormProps) {
             ))}
           </select>
         </Field>
-        <Field name="status" label="Status" errors={errors.status}>
-          <select {...fieldProps("status", errors)} defaultValue={job.status} className={selectClassName}>
-            {JOB_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {JOB_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
-        </Field>
+        {/* A new job is always scheduled; status is only edited later. */}
+        {job && (
+          <Field name="status" label="Status" errors={errors.status}>
+            <select {...fieldProps("status", errors)} defaultValue={job.status} className={selectClassName}>
+              {JOB_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {JOB_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+          </Field>
+        )}
       </div>
 
       <Field name="notes" label="Notes" errors={errors.notes}>
-        <Textarea {...fieldProps("notes", errors)} defaultValue={job.notes} rows={5} />
+        <Textarea {...fieldProps("notes", errors)} defaultValue={values.notes} rows={5} />
       </Field>
 
       {state.error && (
@@ -103,7 +137,7 @@ export function JobForm({ job, crews, filters, onCancel }: JobFormProps) {
           Cancel
         </Button>
         <Button type="submit" size="lg" disabled={pending}>
-          {pending ? "Saving…" : "Save job"}
+          {pending ? "Saving…" : job ? "Save job" : "Create job"}
         </Button>
       </div>
     </form>

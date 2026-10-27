@@ -4,8 +4,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/lib/auth";
 import { todayInBusinessZone } from "@/lib/business-time";
-import { boardHref, parseBoardFilters } from "@/lib/jobs/board-filters";
-import { jobFormErrors, jobUpdateSchema, type JobFormField } from "@/lib/jobs/job-form";
+import { boardAfterCreate, boardHref, parseBoardFilters } from "@/lib/jobs/board-filters";
+import {
+  jobCreateSchema,
+  jobFormErrors,
+  jobUpdateSchema,
+  type JobFormField,
+} from "@/lib/jobs/job-form";
 import { createClient } from "@/lib/supabase/server";
 
 export type JobFormState = {
@@ -18,6 +23,40 @@ const FOREIGN_KEY_VIOLATION = "23503";
 function formValue(formData: FormData, name: string) {
   const value = formData.get(name);
   return typeof value === "string" ? value : undefined;
+}
+
+const CREW_GONE: JobFormState = {
+  error: null,
+  fieldErrors: { crewId: ["That crew no longer exists. Pick another."] },
+};
+
+// The return view is user input like any URL, so it goes through the same parser.
+function returnFilters(formData: FormData, date: string | undefined) {
+  return parseBoardFilters(
+    { date, crew: formValue(formData, "returnCrew") },
+    todayInBusinessZone(),
+  );
+}
+
+export async function createJob(_previous: JobFormState, formData: FormData): Promise<JobFormState> {
+  await requireRole("dispatcher");
+
+  const parsed = jobCreateSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { error: null, fieldErrors: jobFormErrors(parsed.error).fieldErrors };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("jobs").insert(parsed.data.insert);
+
+  if (error) {
+    if (error.code === FOREIGN_KEY_VIOLATION) return CREW_GONE;
+    return { error: "Could not create the job right now. Try again in a minute." };
+  }
+
+  revalidatePath("/board");
+  const { date, insert } = parsed.data;
+  redirect(boardHref(boardAfterCreate(returnFilters(formData, date), { date, crewId: insert.crew_id })));
 }
 
 export async function updateJob(_previous: JobFormState, formData: FormData): Promise<JobFormState> {
@@ -45,9 +84,7 @@ export async function updateJob(_previous: JobFormState, formData: FormData): Pr
     .select("id");
 
   if (error) {
-    if (error.code === FOREIGN_KEY_VIOLATION) {
-      return { error: null, fieldErrors: { crewId: ["That crew no longer exists. Pick another."] } };
-    }
+    if (error.code === FOREIGN_KEY_VIOLATION) return CREW_GONE;
     return { error: "Could not save the job right now. Try again in a minute." };
   }
 
@@ -57,10 +94,5 @@ export async function updateJob(_previous: JobFormState, formData: FormData): Pr
   }
 
   revalidatePath("/board");
-  // The return view is user input like any URL, so it goes through the same parser.
-  const returnTo = parseBoardFilters(
-    { date: formValue(formData, "returnDate"), crew: formValue(formData, "returnCrew") },
-    todayInBusinessZone(),
-  );
-  redirect(boardHref(returnTo));
+  redirect(boardHref(returnFilters(formData, formValue(formData, "returnDate"))));
 }
