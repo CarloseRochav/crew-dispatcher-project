@@ -25,6 +25,25 @@ export async function getBoardJobs({ date, crew }: BoardFilters) {
 
 export type BoardJob = Awaited<ReturnType<typeof getBoardJobs>>[number];
 
+const CREW_DAY_JOB_COLUMNS = "id, customer_name, address, job_type, scheduled_for, status, notes";
+
+// RLS already limits a crew to its own jobs; the crew filter makes the query say so.
+export async function getCrewDayJobs(crewId: string, date: string) {
+  const supabase = await createClient();
+  const { start, end } = businessDayRange(date);
+  const { data, error } = await supabase
+    .from("jobs")
+    .select(CREW_DAY_JOB_COLUMNS)
+    .eq("crew_id", crewId)
+    .gte("scheduled_for", start.toISOString())
+    .lt("scheduled_for", end.toISOString())
+    .order("scheduled_for");
+  if (error) throw error;
+  return data;
+}
+
+export type CrewDayJob = Awaited<ReturnType<typeof getCrewDayJobs>>[number];
+
 const JOB_DETAIL_COLUMNS =
   "id, customer_name, address, job_type, scheduled_for, status, crew_id, notes, updated_at";
 
