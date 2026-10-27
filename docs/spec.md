@@ -94,6 +94,25 @@ The dispatcher board subscribes to changes on `jobs` with Supabase Realtime. Rea
 - Postgres Changes (not Broadcast): `jobs` is in the `supabase_realtime` publication (migration `enable_jobs_realtime`). Each insert and update is checked against the subscriber's RLS select policies, so a crew only hears about its own jobs and a logged-out visitor hears nothing.
 - Accepted limit (Step 8): Postgres cannot check RLS on a deleted row, so every logged-in subscriber, crews included, receives a delete event for any job. It carries only the job's id (replica identity stays at the default; never set it to `full`), no customer, address or notes. The app has no "delete job" feature yet; this only happens when a job is deleted in the dashboard.
 
+## Deployment
+
+Live: https://crew-dispatcher-project.vercel.app
+
+- Vercel project imported from the GitHub repo; every push to `master` deploys.
+- Vercel environment variables (Production and Preview): `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` only. The `TEST_*` passwords stay in `.env.local` for `npm test`. No service role key anywhere.
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` holds a new-format publishable key (`sb_publishable_…`). Supabase accepts it in place of the old anon JWT; RLS applies the same way.
+- Login is email and password only, so Supabase Auth needs no redirect URL for the Vercel domain.
+- The first deploys failed because the two variables were not set in Vercel: `lib/env.ts` stops the build ("Invalid public env vars"). Reproduced locally by building with them empty.
+
+Verified on the live URL (2026-10-27):
+
+- Logged out, `/`, `/board` and `/crew` redirect to `/login`.
+- Dispatcher sees the board with the Live indicator; North Crew (private window, phone size) sees today's North jobs.
+- Start job on the phone moves the card on the board with no refresh.
+- North Crew opening `/board` is redirected away.
+- The board's browser code contains only the publishable key: no `service_role`, no secret key (checked in DevTools after login).
+- Before the first push, all git history was scanned for the real `.env.local` values and key patterns: none found.
+
 ## Screens
 
 1. **Dispatcher board (desktop).** Three columns with job cards. Top bar: date switcher, crew filter, "New job" button. A card shows customer, address, job type, crew, time, and a status badge.
