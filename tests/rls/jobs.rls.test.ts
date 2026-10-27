@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { JobStatus } from "@/lib/jobs/status";
 import {
   anonClient,
@@ -108,7 +108,6 @@ describe("a crew cannot edit another crew's job", () => {
 });
 
 describe("a crew can undo one status step on its own job (Step 7 decision)", () => {
-  // These tests move seeded jobs; put them back so other tests and the demo see the seed.
   const seedStatuses: [string, JobStatus][] = [
     [jobIds.northDone, "done"],
     [jobIds.northOnSite, "on_site"],
@@ -116,14 +115,19 @@ describe("a crew can undo one status step on its own job (Step 7 decision)", () 
     [jobIds.southOnSite, "on_site"],
   ];
 
-  afterEach(async () => {
+  async function resetSeedStatuses() {
     const results = await Promise.all(
       seedStatuses.map(([id, status]) =>
         dispatcher.from("jobs").update({ status }).eq("id", id).neq("status", status),
       ),
     );
     for (const { error } of results) if (error) throw error;
-  });
+  }
+
+  // Before: clicking through the app moves seeded jobs, and these tests start from the seed.
+  // After: so other tests and the demo see the seed again.
+  beforeEach(resetSeedStatuses);
+  afterEach(resetSeedStatuses);
 
   async function moveAsNorthCrew(id: string, status: JobStatus) {
     return northCrew.rpc("update_job_status", { p_job_id: id, p_new_status: status });

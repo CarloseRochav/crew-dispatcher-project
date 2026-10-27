@@ -91,6 +91,9 @@ Decide these before the step that needs them. Until then, do not build either be
 
 The dispatcher board subscribes to changes on `jobs` with Supabase Realtime. Realtime must respect the same row-level security. Verify with two browser windows: a change in one appears in the other with no refresh.
 
+- Postgres Changes (not Broadcast): `jobs` is in the `supabase_realtime` publication (migration `enable_jobs_realtime`). Each insert and update is checked against the subscriber's RLS select policies, so a crew only hears about its own jobs and a logged-out visitor hears nothing.
+- Accepted limit (Step 8): Postgres cannot check RLS on a deleted row, so every logged-in subscriber, crews included, receives a delete event for any job. It carries only the job's id (replica identity stays at the default; never set it to `full`), no customer, address or notes. The app has no "delete job" feature yet; this only happens when a job is deleted in the dashboard.
+
 ## Screens
 
 1. **Dispatcher board (desktop).** Three columns with job cards. Top bar: date switcher, crew filter, "New job" button. A card shows customer, address, job type, crew, time, and a status badge.
