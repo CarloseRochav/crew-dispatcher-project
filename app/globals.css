@@ -3,20 +3,20 @@
 @import "shadcn/tailwind.css";
 
 /*
- * The spec has one (light) theme. Without this, Tailwind's dark: follows the OS
- * setting, so on a dark-mode device shadcn's dark: styles landed on top of the
- * light tokens (washed-out tabs and outline buttons). Tied to a .dark class the
- * app never sets, they stay off until a dark theme is designed.
+ * dark: follows the .dark class on <html>, never the OS setting directly: the
+ * theme switch (System / Light / Dark) decides, so "Light" stays light on a
+ * dark-mode device. Without this, shadcn's dark: styles landed on top of the
+ * light tokens on dark-mode devices.
  */
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Design tokens from docs/spec.md (section "Design tokens").
+ * Design tokens from docs/spec.md (section "Design tokens"), light and dark.
  * Spec tokens reuse shadcn's variable names so shadcn components pick them up;
  * ink/surface/status are exposed under their spec names too.
- * Only light mode: the spec defines a single theme.
  */
 :root {
+  color-scheme: light;
   --background: #f6f6f3;
   --foreground: #1b1f24;
   --card: #ffffff;
@@ -45,6 +45,42 @@
   --destructive: #b42318;
   --border: #dddcd5;
   --input: #dddcd5;
+}
+
+/*
+ * Dark values for the same tokens; every text pair passes WCAG AA (docs/spec.md).
+ * Primary turns light blue: the navy would vanish on a dark background, so primary
+ * buttons flip to dark text on light blue.
+ * color-scheme makes native controls (date/time pickers, selects, scrollbars) dark too.
+ */
+.dark {
+  color-scheme: dark;
+  --background: #121417;
+  --foreground: #e6e8eb;
+  --card: #1b1e23;
+  --card-foreground: #e6e8eb;
+  --popover: #1b1e23;
+  --popover-foreground: #e6e8eb;
+  --primary: #6ca6db;
+  --primary-foreground: #0d1b2a;
+  --muted-foreground: #9aa3ae;
+  --ring: #6ca6db;
+
+  --status-scheduled: #9cc2ea;
+  --status-scheduled-bg: #1e3247;
+  --status-on-site: #f2b76b;
+  --status-on-site-bg: #3d2a12;
+  --status-done: #86d3a4;
+  --status-done-bg: #173826;
+
+  --secondary: #262a30;
+  --secondary-foreground: #e6e8eb;
+  --muted: #262a30;
+  --accent: #262a30;
+  --accent-foreground: #e6e8eb;
+  --destructive: #f07167;
+  --border: #333941;
+  --input: #333941;
 }
 
 @theme inline {

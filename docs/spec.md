@@ -135,18 +135,23 @@ Visual reference: the mockup in the Design artifact (dispatcher board and crew p
 
 Define as CSS variables, expose through Tailwind. Never hard-code in components.
 
-| Token | Value | Use |
-| --- | --- | --- |
-| background | #F6F6F3 | Page |
-| surface | #FFFFFF | Cards and panels |
-| ink | #1B1F24 | Text |
-| muted | #5B6470 | Secondary text |
-| primary | #1F4E79 | Buttons, links, focus ring |
-| status scheduled | text #345F8C on #E4ECF5 | Badge |
-| status on site | text #9A5208 on #FBEBD3 | Badge |
-| status done | text #276B43 on #DFF0E5 | Badge |
-| radius | 8px | Cards, buttons, inputs |
-| font | Inter | 14px base, 16px on phone |
+Two themes, same tokens (Step 13). Dark applies through a `.dark` class on `<html>`. A theme switch offers System (the default, follows the OS), Light and Dark.
+
+| Token | Light | Dark | Use |
+| --- | --- | --- | --- |
+| background | #F6F6F3 | #121417 | Page |
+| surface | #FFFFFF | #1B1E23 | Cards and panels |
+| ink | #1B1F24 | #E6E8EB | Text |
+| muted | #5B6470 | #9AA3AE | Secondary text |
+| primary | #1F4E79 | #6CA6DB | Buttons, links, focus ring |
+| text on primary | #FFFFFF | #0D1B2A | Primary button label |
+| status scheduled | text #345F8C on #E4ECF5 | text #9CC2EA on #1E3247 | Badge |
+| status on site | text #9A5208 on #FBEBD3 | text #F2B76B on #3D2A12 | Badge |
+| status done | text #276B43 on #DFF0E5 | text #86D3A4 on #173826 | Badge |
+| radius | 8px | 8px | Cards, buttons, inputs |
+| font | Inter | Inter | 14px base, 16px on phone |
+
+Dark contrast, measured: ink on background 15.0:1, muted on surface 6.5:1, links on surface 6.5:1, primary button 6.7:1, badges 7.1 to 7.7:1. Primary turns light blue in dark because the navy would disappear on a dark background.
 
 Usability rules: status by color + label + icon, touch targets at least 44px, empty states everywhere, WCAG AA contrast, cards limited to four lines (anything more goes in the drawer).
 
