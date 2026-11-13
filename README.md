@@ -20,7 +20,11 @@ Three columns by status, filtered by date and crew (including unassigned jobs). 
 
 ![Job drawer open on the right of the board](docs/screenshots/job-drawer.png)
 
-Click a card to edit it in a side panel without leaving the board, or press **New job**. If a crew changes the job while it is open, the drawer says so and the save is refused instead of overwriting the crew's change. The **History** tab lists who changed the job's status and when, and updates live; switching tabs keeps unsaved edits.
+Click a card to edit it in a side panel without leaving the board, or press **New job**. If a crew changes the job while it is open, the drawer says so and the save is refused instead of overwriting the crew's change.
+
+![History tab of the job drawer listing two status changes by the crew](docs/screenshots/job-history.png)
+
+The **History** tab lists who changed the job's status and when, newest first, and updates live while the drawer is open. Switching tabs keeps unsaved edits.
 
 ### Crew day view (phone)
 
