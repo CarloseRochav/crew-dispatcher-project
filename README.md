@@ -96,7 +96,7 @@ Built with Claude Code, one small step at a time, with every plan and every data
 ## Run it locally
 
 1. Create a Supabase project. Copy `.env.example` to `.env.local` and fill in the project URL and public key (Project Settings > API).
-2. Apply the schema: `npx supabase link --project-ref <your-ref>`, then `npx supabase db push`.
+2. Apply the schema: `npx supabase link --project-ref <your-ref>`, then `npx supabase db push --remote` (Supabase CLI 3.x targets a local database without `--remote`).
 3. In Authentication > Users, add `dispatcher@example.com`, `north.crew@example.com` and `south.crew@example.com` with "Auto Confirm User". Put their passwords in `.env.local` (`TEST_*_PASSWORD`, used by the tests only).
 4. Run `supabase/seed.sql` in the SQL Editor. Re-run it any day to move the demo jobs to today.
 5. `npm install`, then `npm run dev` (http://localhost:3000) and `npm test`.

@@ -42,7 +42,7 @@ Payments, maps embeds, photo uploads, invoicing, notifications, a custom design 
 | profiles | id (references auth.users), name, role (`dispatcher` or `crew`), crew_id (nullable) | One row per login, created by a trigger on signup |
 | crews | id, name | 2 to 3 seed crews |
 | jobs | id, customer_name, address, job_type, scheduled_for (timestamptz), status, crew_id, notes, updated_at | `status` is a Postgres enum: `scheduled`, `on_site`, `done` |
-| job_events (stretch) | id, job_id, changed_by, old_status, new_status, created_at | Written by a trigger |
+| job_events | id, job_id, changed_by, old_status, new_status, created_at | Written by a trigger (see Job timeline) |
 
 Time zone: the business runs on `America/Tijuana`. "Today" (crew day view, board date filter, seed data) means today in that zone. `scheduled_for` stays `timestamptz`, stored in UTC.
 
@@ -70,9 +70,19 @@ Crew status changes through `update_job_status`:
 - A crew note is appended to the job's notes on a new line. It never replaces what the dispatcher wrote. Max 1000 characters.
 - A job that doesn't exist and a job from another crew return the same "Job not found" error, so a crew cannot discover other crews' job ids.
 
+## Job timeline (Step 10)
+
+Decided in Step 10a (migration `add_job_events`):
+
+- `job_events` records two things: a job being created (`old_status` null) and a real status change. Edits to other fields, and a crew note sent without a status change, write no event.
+- Written only by a trigger on `jobs` (`security definer`). Nobody inserts, updates or deletes events directly, not even the dispatcher, so the history cannot be rewritten. Deleting a job deletes its events.
+- `changed_by` is the logged-in user, also for crew changes through `update_job_status`. Changes made with no login (SQL Editor, seed) are kept with `changed_by` null and shown as "System". `supabase/seed.sql` clears the demo jobs' events after resetting them.
+- Only the dispatcher can read events. Crews and logged-out visitors cannot, not even for their own jobs.
+- Accepted: the RLS tests move North's 2:00 PM job and leave real events behind on the live database; re-running the seed clears them.
+
 ## Database workflow
 
-- Schema changes are migration files in `supabase/migrations/`, created with `npx supabase migration new <name>` and applied with `npx supabase db push` (project linked with the Supabase CLI).
+- Schema changes are migration files in `supabase/migrations/`, created with `npx supabase migration new <name>` and applied with `npx supabase db push --remote` (project linked with the Supabase CLI). Since CLI 3.x, `db push`, `migration list` and `gen types` target a local Docker database unless given `--remote`; run `--dry-run` first to see which files will apply, and when Claude Code runs it the CLI also needs `--yes`, given only after the SQL is approved.
 - A migration that has run is never edited. Every change, including a fix or an undo, is a new migration file.
 - `supabase/seed.sql` holds fictional demo data only. It is safe to re-run, and re-running resets the demo jobs to today. It is run in the SQL Editor.
 - Demo logins are created in Authentication > Users, with "Auto Confirm User": `dispatcher@example.com`, `north.crew@example.com`, `south.crew@example.com`. Passwords are never committed.

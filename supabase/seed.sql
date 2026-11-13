@@ -75,3 +75,14 @@ on conflict (id) do update set
   status = excluded.status,
   crew_id = excluded.crew_id,
   notes = excluded.notes;
+
+-- The reset above is logged by the job_events triggers as "System" changes.
+-- Clear the demo jobs' history so each demo day starts with an empty timeline.
+delete from public.job_events
+where job_id in (
+  'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000002',
+  'a0000000-0000-4000-8000-000000000003', 'a0000000-0000-4000-8000-000000000004',
+  'a0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-000000000006',
+  'a0000000-0000-4000-8000-000000000007', 'a0000000-0000-4000-8000-000000000008',
+  'a0000000-0000-4000-8000-000000000009'
+);

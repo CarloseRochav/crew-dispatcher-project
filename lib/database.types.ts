@@ -54,6 +54,48 @@ export type Database = {
         }
         Relationships: []
       }
+      job_events: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          id: string
+          job_id: string
+          new_status: Database["public"]["Enums"]["job_status"]
+          old_status: Database["public"]["Enums"]["job_status"] | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          job_id: string
+          new_status: Database["public"]["Enums"]["job_status"]
+          old_status?: Database["public"]["Enums"]["job_status"] | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          job_id?: string
+          new_status?: Database["public"]["Enums"]["job_status"]
+          old_status?: Database["public"]["Enums"]["job_status"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_events_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "job_events_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       jobs: {
         Row: {
           address: string
