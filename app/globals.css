@@ -3,6 +3,14 @@
 @import "shadcn/tailwind.css";
 
 /*
+ * The spec has one (light) theme. Without this, Tailwind's dark: follows the OS
+ * setting, so on a dark-mode device shadcn's dark: styles landed on top of the
+ * light tokens (washed-out tabs and outline buttons). Tied to a .dark class the
+ * app never sets, they stay off until a dark theme is designed.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
  * Design tokens from docs/spec.md (section "Design tokens").
  * Spec tokens reuse shadcn's variable names so shadcn components pick them up;
  * ink/surface/status are exposed under their spec names too.
