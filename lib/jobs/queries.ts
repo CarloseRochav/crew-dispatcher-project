@@ -61,6 +61,22 @@ export async function getJob(id: string) {
 
 export type JobDetails = NonNullable<Awaited<ReturnType<typeof getJob>>>;
 
+// RLS: only the dispatcher can read job_events (docs/spec.md, Job timeline).
+// changed_by_profile is null for changes made with no login ("System").
+export async function getJobEvents(jobId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("job_events")
+    .select("id, old_status, new_status, created_at, changed_by_profile:profiles(name)")
+    .eq("job_id", jobId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return data;
+}
+
+export type JobEvent = Awaited<ReturnType<typeof getJobEvents>>[number];
+
 export async function getCrews() {
   const supabase = await createClient();
   const { data, error } = await supabase.from("crews").select("id, name").order("name");

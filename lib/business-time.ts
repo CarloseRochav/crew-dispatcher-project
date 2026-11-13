@@ -35,6 +35,13 @@ const dayLabelFormatter = new Intl.DateTimeFormat("en-US", {
   day: "numeric",
 });
 
+const eventDayFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: BUSINESS_TIME_ZONE,
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+
 const MINUTE_MS = 60_000;
 
 function parseIsoDate(date: string) {
@@ -101,6 +108,12 @@ export function businessDayRange(date: string) {
 
 export function formatJobTime(scheduledFor: string) {
   return jobTimeFormatter.format(new Date(scheduledFor));
+}
+
+// A timeline entry can be from any day, so it always carries the date ("Thu, Nov 12 · 2:14 PM").
+export function formatEventTime(instant: string) {
+  const at = new Date(instant);
+  return `${eventDayFormatter.format(at)} · ${jobTimeFormatter.format(at)}`;
 }
 
 export function formatDayLabel(date: string) {

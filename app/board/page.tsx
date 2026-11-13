@@ -4,7 +4,8 @@ import { SignedInHeader } from "@/components/signed-in-header";
 import { requireRole } from "@/lib/auth";
 import { addDays, formatDayLabel, todayInBusinessZone } from "@/lib/business-time";
 import { NEW_JOB, parseBoardFilters, parseOpenJobId } from "@/lib/jobs/board-filters";
-import { getBoardJobs, getCrews, getJob } from "@/lib/jobs/queries";
+import { getBoardJobs, getCrews, getJob, getJobEvents } from "@/lib/jobs/queries";
+import { toTimelineEntry } from "@/lib/jobs/timeline";
 import { JOB_STATUSES } from "@/lib/jobs/status";
 import { BoardColumn } from "./board-column";
 import { BoardFiltersBar } from "./board-filters";
@@ -31,13 +32,18 @@ async function DispatcherBoard({ searchParams }: Pick<PageProps<"/board">, "sear
   const filters = parseBoardFilters(params, today);
   const openJobId = parseOpenJobId(params);
   const editingJobId = openJobId && openJobId !== NEW_JOB ? openJobId : null;
-  const [jobs, crews, editingJob] = await Promise.all([
+  const [jobs, crews, editingJob, editingJobEvents] = await Promise.all([
     getBoardJobs(filters),
     getCrews(),
     editingJobId ? getJob(editingJobId) : null,
+    editingJobId ? getJobEvents(editingJobId) : [],
   ]);
   const drawer: DrawerContent | null =
-    openJobId === NEW_JOB ? { mode: "create" } : editingJobId ? { mode: "edit", job: editingJob } : null;
+    openJobId === NEW_JOB
+      ? { mode: "create" }
+      : editingJobId
+        ? { mode: "edit", job: editingJob, history: editingJobEvents.map(toTimelineEntry) }
+        : null;
 
   return (
     <>

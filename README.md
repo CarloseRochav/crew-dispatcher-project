@@ -20,7 +20,7 @@ Three columns by status, filtered by date and crew (including unassigned jobs). 
 
 ![Job drawer open on the right of the board](docs/screenshots/job-drawer.png)
 
-Click a card to edit it in a side panel without leaving the board, or press **New job**. If a crew changes the job while it is open, the drawer says so and the save is refused instead of overwriting the crew's change.
+Click a card to edit it in a side panel without leaving the board, or press **New job**. If a crew changes the job while it is open, the drawer says so and the save is refused instead of overwriting the crew's change. The **History** tab lists who changed the job's status and when, and updates live; switching tabs keeps unsaved edits.
 
 ### Crew day view (phone)
 
@@ -37,18 +37,20 @@ Only that crew's jobs for today. One large button per job (**Start job**, then *
 | `profiles` | id (auth user), name, role (`dispatcher` or `crew`), crew_id |
 | `crews` | id, name |
 | `jobs` | id, customer_name, address, job_type, scheduled_for (timestamptz), status (`scheduled`, `on_site`, `done`), crew_id (nullable), notes, updated_at |
+| `job_events` | id, job_id, changed_by (null = "System"), old_status (null = created), new_status, created_at |
 
 Row-level security is on for every table. Nothing is readable without a login.
 
 | Who | Can |
 | --- | --- |
-| Dispatcher | Read and write all jobs, crews and profiles |
+| Dispatcher | Read and write all jobs, crews and profiles. Read the job timeline |
 | Crew | Read only its own crew's jobs. Change only status and notes, and only through the `update_job_status` function: one step at a time (forward or back), never another crew's job |
 | Logged out | Nothing |
 
 - A user cannot change their own role or crew (a trigger, for dispatchers too). New signups start as a crew member with no crew and see nothing.
 - A job from another crew and a job that does not exist return the same "Job not found", so a crew cannot discover other crews' job ids.
 - Realtime uses the same policies: a crew only hears about its own jobs, a logged-out visitor hears nothing.
+- The job timeline is written only by a trigger on `jobs`. Nobody can add, edit or delete an event, not even the dispatcher, and crews cannot read it.
 
 Full rules: [`docs/spec.md`](docs/spec.md). Schema and policies: [`supabase/migrations/`](supabase/migrations/).
 
@@ -68,9 +70,10 @@ Full rules: [`docs/spec.md`](docs/spec.md). Schema and policies: [`supabase/migr
 
 Built with Claude Code, one small step at a time, with every plan and every database change approved first.
 
-**Proved by tests (103, `npm test`).** RLS tests prove a crew cannot read or edit another crew's jobs, or change a job's customer, address or crew. Realtime tests prove a crew never hears about another crew's job. Each kind was made to fail once on purpose:
+**Proved by tests (123, `npm test`).** RLS tests prove a crew cannot read or edit another crew's jobs, or change a job's customer, address or crew. Realtime tests prove a crew never hears about another crew's job. Timeline tests prove every status change is logged with the right person, crews cannot read the timeline and nobody can write it. Each kind was made to fail once on purpose:
 
 - A migration that widened the crew read policy made the 3 cross-crew read tests fail; the next migration restored it (both kept in `supabase/migrations/`).
+- A migration that let any logged-in user read the timeline made the 2 crew-read timeline tests fail; the next migration restored it.
 - The Realtime tests failed before Realtime was turned on for `jobs`, and passed after.
 - Removing one line from the refresh scheduler made 2 of its 5 tests fail.
 
@@ -86,7 +89,6 @@ Built with Claude Code, one small step at a time, with every plan and every data
 
 ## What I'd build next
 
-- Job timeline: who changed what and when (`job_events`, written by a trigger)
 - A button that turns a crew's rough note into a clean job summary with the Claude API
 - Adding a note from the phone (the database function already accepts one)
 - Deleting jobs, together with a fix for the delete-event limit
