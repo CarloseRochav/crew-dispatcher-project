@@ -1,4 +1,5 @@
 import { signOut } from "@/app/login/actions";
+import { ThemeSwitch } from "@/components/theme-switch";
 import { Button } from "@/components/ui/button";
 
 type SignedInHeaderProps = {
@@ -13,11 +14,14 @@ export function SignedInHeader({ title, name }: SignedInHeaderProps) {
         <h1 className="text-lg font-semibold text-ink">{title}</h1>
         {name && <p className="text-sm text-muted-foreground">{name}</p>}
       </div>
-      <form action={signOut}>
-        <Button type="submit" variant="outline" className="h-11 px-4">
-          Sign out
-        </Button>
-      </form>
+      <div className="flex items-center gap-2">
+        <ThemeSwitch />
+        <form action={signOut}>
+          <Button type="submit" variant="outline" className="h-11 px-4">
+            Sign out
+          </Button>
+        </form>
+      </div>
     </header>
   );
 }

@@ -69,12 +69,13 @@ Full rules: [`docs/spec.md`](docs/spec.md). Schema and policies: [`supabase/migr
 - **Validation at every boundary.** zod checks every form, hidden field and URL parameter, including the "return to this view" value after saving (no open redirects).
 - **Tests run against the live Supabase project** with the public key and real demo logins, so they test the real policies. Each test sets up its own starting data, because the database is shared.
 - **Public key format.** `NEXT_PUBLIC_SUPABASE_ANON_KEY` holds Supabase's new publishable key (`sb_publishable_…`), which replaces the old anon key. The service role key is not used anywhere.
+- **Light and dark, same tokens.** A header switch cycles System (default, follows the OS), Light and Dark, remembered per device. A tiny inline script applies the choice before the first paint, so dark never flashes white. Every dark text pair passes WCAG AA, measured.
 
 ## What I verified
 
 Built with Claude Code, one small step at a time, with every plan and every database change approved first.
 
-**Proved by tests (123, `npm test`).** RLS tests prove a crew cannot read or edit another crew's jobs, or change a job's customer, address or crew. Realtime tests prove a crew never hears about another crew's job. Timeline tests prove every status change is logged with the right person, crews cannot read the timeline and nobody can write it. Each kind was made to fail once on purpose:
+**Proved by tests (134, `npm test`).** RLS tests prove a crew cannot read or edit another crew's jobs, or change a job's customer, address or crew. Realtime tests prove a crew never hears about another crew's job. Timeline tests prove every status change is logged with the right person, crews cannot read the timeline and nobody can write it. Each kind was made to fail once on purpose:
 
 - A migration that widened the crew read policy made the 3 cross-crew read tests fail; the next migration restored it (both kept in `supabase/migrations/`).
 - A migration that let any logged-in user read the timeline made the 2 crew-read timeline tests fail; the next migration restored it.
