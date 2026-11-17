@@ -26,6 +26,8 @@ Click a card to edit it in a side panel without leaving the board, or press **Ne
 
 The **History** tab lists who changed the job's status and when, newest first, and updates live while the drawer is open. Switching tabs keeps unsaved edits.
 
+The **Summary** tab turns the job's notes into a short, clean summary with an OpenAI model on Azure AI Foundry, saved with the job. Pressing the button again replaces it.
+
 ### Crew day view (phone)
 
 ![Crew day view on a phone with Start job buttons](docs/screenshots/crew-day-view.png)
@@ -40,7 +42,7 @@ Only that crew's jobs for today. One large button per job (**Start job**, then *
 | --- | --- |
 | `profiles` | id (auth user), name, role (`dispatcher` or `crew`), crew_id |
 | `crews` | id, name |
-| `jobs` | id, customer_name, address, job_type, scheduled_for (timestamptz), status (`scheduled`, `on_site`, `done`), crew_id (nullable), notes, updated_at |
+| `jobs` | id, customer_name, address, job_type, scheduled_for (timestamptz), status (`scheduled`, `on_site`, `done`), crew_id (nullable), notes, summary (AI-written, dispatcher only), updated_at |
 | `job_events` | id, job_id, changed_by (null = "System"), old_status (null = created), new_status, created_at |
 
 Row-level security is on for every table. Nothing is readable without a login.
@@ -69,16 +71,18 @@ Full rules: [`docs/spec.md`](docs/spec.md). Schema and policies: [`supabase/migr
 - **Validation at every boundary.** zod checks every form, hidden field and URL parameter, including the "return to this view" value after saving (no open redirects).
 - **Tests run against the live Supabase project** with the public key and real demo logins, so they test the real policies. Each test sets up its own starting data, because the database is shared.
 - **Public key format.** `NEXT_PUBLIC_SUPABASE_ANON_KEY` holds Supabase's new publishable key (`sb_publishable_…`), which replaces the old anon key. The service role key is not used anywhere.
+- **AI summary on Azure AI Foundry, server-side only.** The dispatcher's button calls a server action that reads the notes from the database (never from the browser), sends them to an OpenAI deployment through the official `openai` package and Azure's v1 API, checks the reply with zod and saves it in `jobs.summary`, apart from the crews' own notes. The key and endpoint are server-only env vars; without them the app runs and the Summary tab says AI isn't set up. Notes are treated as data, so a note that says "ignore your instructions" is summarized, not obeyed. The demo notes are fictional, but they are sent to Azure: a real company would need to agree to that first.
 - **Light and dark, same tokens.** A header switch cycles System (default, follows the OS), Light and Dark, remembered per device. A tiny inline script applies the choice before the first paint, so dark never flashes white. Every dark text pair passes WCAG AA, measured.
 
 ## What I verified
 
 Built with Claude Code, one small step at a time, with every plan and every database change approved first.
 
-**Proved by tests (134, `npm test`).** RLS tests prove a crew cannot read or edit another crew's jobs, or change a job's customer, address or crew. Realtime tests prove a crew never hears about another crew's job. Timeline tests prove every status change is logged with the right person, crews cannot read the timeline and nobody can write it. Each kind was made to fail once on purpose:
+**Proved by tests (156, `npm test`).** RLS tests prove a crew cannot read or edit another crew's jobs, or change a job's customer, address or crew. Realtime tests prove a crew never hears about another crew's job. Timeline tests prove every status change is logged with the right person, crews cannot read the timeline and nobody can write it. Summary tests prove only the dispatcher can write a summary; the AI call is tested with a fake, so tests never reach Azure. Each kind was made to fail once on purpose:
 
 - A migration that widened the crew read policy made the 3 cross-crew read tests fail; the next migration restored it (both kept in `supabase/migrations/`).
 - A migration that let any logged-in user read the timeline made the 2 crew-read timeline tests fail; the next migration restored it.
+- A migration that let crews update their own jobs directly made the summary and customer/address tests fail; the next migration restored it.
 - The Realtime tests failed before Realtime was turned on for `jobs`, and passed after.
 - Removing one line from the refresh scheduler made 2 of its 5 tests fail.
 
@@ -94,7 +98,6 @@ Built with Claude Code, one small step at a time, with every plan and every data
 
 ## What I'd build next
 
-- A button that turns a crew's rough note into a clean job summary with the Claude API
 - Adding a note from the phone (the database function already accepts one)
 - Deleting jobs, together with a fix for the delete-event limit
 - A daily reset of the demo data, so the live board always has jobs for today
@@ -106,4 +109,5 @@ Built with Claude Code, one small step at a time, with every plan and every data
 2. Apply the schema: `npx supabase link --project-ref <your-ref>`, then `npx supabase db push --remote` (Supabase CLI 3.x targets a local database without `--remote`).
 3. In Authentication > Users, add `dispatcher@example.com`, `north.crew@example.com` and `south.crew@example.com` with "Auto Confirm User". Put their passwords in `.env.local` (`TEST_*_PASSWORD`, used by the tests only).
 4. Run `supabase/seed.sql` in the SQL Editor. Re-run it any day to move the demo jobs to today.
-5. `npm install`, then `npm run dev` (http://localhost:3000) and `npm test`.
+5. Optional, for job summaries: deploy a model in Azure AI Foundry and fill in `AZURE_OPENAI_BASE_URL`, `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_DEPLOYMENT` in `.env.local` (and in Vercel for the live site).
+6. `npm install`, then `npm run dev` (http://localhost:3000) and `npm test`.

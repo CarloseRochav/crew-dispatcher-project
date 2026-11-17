@@ -25,6 +25,8 @@ type JobFormProps = {
   // The board view to go back to after saving; a new job also starts from it.
   filters: BoardFilters;
   onCancel: () => void;
+  // Called on every edit, so the drawer knows the form has unsaved changes.
+  onEdit?: () => void;
 };
 
 // A new job starts on the day and crew the dispatcher is looking at. The time
@@ -52,7 +54,7 @@ function startingValues(job: JobDetails | null, filters: BoardFilters) {
   };
 }
 
-export function JobForm({ job: latestJob, crews, filters, onCancel }: JobFormProps) {
+export function JobForm({ job: latestJob, crews, filters, onCancel, onEdit }: JobFormProps) {
   // The version the dispatcher opened. Live refreshes pass newer versions in as
   // latestJob, but the form keeps this one: the save must still be checked
   // against what the dispatcher saw, or a crew's change would be overwritten.
@@ -72,7 +74,7 @@ export function JobForm({ job: latestJob, crews, filters, onCancel }: JobFormPro
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="flex flex-1 flex-col gap-4 px-4 pb-4">
+    <form onSubmit={handleSubmit} onInput={onEdit} noValidate className="flex flex-1 flex-col gap-4 px-4 pb-4">
       {changedWhileEditing && latestJob && (
         <p role="status" className="flex gap-2 rounded-lg border border-border bg-muted p-3 text-sm text-ink">
           <Info aria-hidden className="mt-0.5 size-4 shrink-0" />

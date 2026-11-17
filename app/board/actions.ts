@@ -2,6 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
+import { readAzureOpenAIEnv } from "@/lib/ai/env";
+import { createSummaryClient, SUMMARY_ERROR_MESSAGES, summarizeNotes } from "@/lib/ai/summarize-notes";
 import { requireRole } from "@/lib/auth";
 import { todayInBusinessZone } from "@/lib/business-time";
 import { boardAfterCreate, boardHref, parseBoardFilters } from "@/lib/jobs/board-filters";
@@ -95,4 +98,46 @@ export async function updateJob(_previous: JobFormState, formData: FormData): Pr
 
   revalidatePath("/board");
   redirect(boardHref(returnFilters(formData, formValue(formData, "returnDate"))));
+}
+
+export type JobSummaryState = { error: string | null };
+
+const jobIdSchema = z.uuid();
+
+// The notes are read from the database, not sent by the browser, so the summary
+// always matches what is stored and a tampered request cannot inject other text.
+export async function summarizeJob(jobId: string): Promise<JobSummaryState> {
+  await requireRole("dispatcher");
+
+  const parsedId = jobIdSchema.safeParse(jobId);
+  if (!parsedId.success) return { error: SUMMARY_ERROR_MESSAGES.job_gone };
+
+  const env = readAzureOpenAIEnv();
+  if (!env) return { error: SUMMARY_ERROR_MESSAGES.not_configured };
+
+  const supabase = await createClient();
+  const { data: job, error: readError } = await supabase
+    .from("jobs")
+    .select("notes")
+    .eq("id", parsedId.data)
+    .maybeSingle();
+  if (readError) return { error: SUMMARY_ERROR_MESSAGES.save_failed };
+  if (!job) return { error: SUMMARY_ERROR_MESSAGES.job_gone };
+
+  const result = await summarizeNotes(job.notes, {
+    createResponse: createSummaryClient(env),
+    deployment: env.AZURE_OPENAI_DEPLOYMENT,
+  });
+  if (!result.ok) return { error: SUMMARY_ERROR_MESSAGES[result.reason] };
+
+  const { data: saved, error: saveError } = await supabase
+    .from("jobs")
+    .update({ summary: result.summary })
+    .eq("id", parsedId.data)
+    .select("id");
+  if (saveError) return { error: SUMMARY_ERROR_MESSAGES.save_failed };
+  if (saved.length === 0) return { error: SUMMARY_ERROR_MESSAGES.job_gone };
+
+  revalidatePath("/board");
+  return { error: null };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { JobStatusBadge } from "@/components/job-status-badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Crew, JobDetails } from "@/lib/jobs/queries";
 import type { TimelineEntry } from "@/lib/jobs/timeline";
 import { JobForm } from "./job-form";
+import { JobSummary } from "./job-summary";
 import { JobTimeline } from "./job-timeline";
 
 export type DrawerContent =
@@ -55,29 +57,15 @@ export function JobDrawer({ content, crews, filters }: JobDrawerProps) {
               </SheetTitle>
               <SheetDescription>Edit the job and save. Times are on the Tijuana clock.</SheetDescription>
             </SheetHeader>
-            {/* Keyed by job so another job opens on Details. Not in the URL: date, crew and job are enough to share. */}
-            <Tabs key={content.job.id} defaultValue="details" className="flex-1">
-              <TabsList className="mx-4 h-10 w-auto">
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="history">History</TabsTrigger>
-              </TabsList>
-              {/* forceMount keeps the form alive on the History tab, so switching never loses unsaved edits;
-                  the inactive panel is only hidden. */}
-              <TabsContent value="details" forceMount className="flex flex-col data-[state=inactive]:hidden">
-                {/* Keyed by id, not updated_at: a live refresh must not wipe what the dispatcher is typing.
-                    A save closes the drawer, so the next open starts from the saved values. */}
-                <JobForm
-                  key={content.job.id}
-                  job={content.job}
-                  crews={crews}
-                  filters={filters}
-                  onCancel={close}
-                />
-              </TabsContent>
-              <TabsContent value="history" className="px-4 pb-4">
-                <JobTimeline entries={content.history} />
-              </TabsContent>
-            </Tabs>
+            {/* Keyed by job so another job opens on Details with no leftover edit state. */}
+            <JobEditTabs
+              key={content.job.id}
+              job={content.job}
+              history={content.history}
+              crews={crews}
+              filters={filters}
+              onClose={close}
+            />
           </>
         ) : (
           <>
@@ -94,5 +82,52 @@ export function JobDrawer({ content, crews, filters }: JobDrawerProps) {
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+type JobEditTabsProps = {
+  job: JobDetails;
+  history: TimelineEntry[];
+  crews: Crew[];
+  filters: BoardFilters;
+  onClose: () => void;
+};
+
+// Not in the URL: date, crew and job are enough to share.
+function JobEditTabs({ job, history, crews, filters, onClose }: JobEditTabsProps) {
+  const [hasUnsavedEdits, setHasUnsavedEdits] = useState(false);
+  // The version the form was built from. While the form is untouched it follows
+  // live changes (a crew's tap, a new summary), so its save check stays current;
+  // once the dispatcher edits, it keeps their version and their typing.
+  const [formVersion, setFormVersion] = useState(job.updated_at);
+  if (!hasUnsavedEdits && job.updated_at !== formVersion) setFormVersion(job.updated_at);
+
+  return (
+    <Tabs defaultValue="details" className="flex-1">
+      <TabsList className="mx-4 h-10 w-auto">
+        <TabsTrigger value="details">Details</TabsTrigger>
+        <TabsTrigger value="summary">Summary</TabsTrigger>
+        <TabsTrigger value="history">History</TabsTrigger>
+      </TabsList>
+      {/* forceMount keeps the form alive on the other tabs, so switching never loses unsaved edits;
+          the inactive panel is only hidden. */}
+      <TabsContent value="details" forceMount className="flex flex-col data-[state=inactive]:hidden">
+        {/* A save closes the drawer, so the next open starts from the saved values. */}
+        <JobForm
+          key={formVersion}
+          job={job}
+          crews={crews}
+          filters={filters}
+          onCancel={onClose}
+          onEdit={() => setHasUnsavedEdits(true)}
+        />
+      </TabsContent>
+      <TabsContent value="summary" className="px-4 pb-4">
+        <JobSummary jobId={job.id} summary={job.summary} hasUnsavedEdits={hasUnsavedEdits} />
+      </TabsContent>
+      <TabsContent value="history" className="px-4 pb-4">
+        <JobTimeline entries={history} />
+      </TabsContent>
+    </Tabs>
   );
 }

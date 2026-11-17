@@ -92,6 +92,12 @@ Decided 2026-11-16 (Step 14a, migration `add_job_summary`):
 - Editing the summary writes no `job_events` row and arrives on the live board like any other job change.
 - Sending the (fictional) job notes to Azure is accepted; stated in the README.
 
+Decided in Step 14b:
+
+- The summary lives in a third drawer tab, "Summary", and is shown only there (not on board cards). It can only be generated, not typed by hand.
+- Saving a summary changes `updated_at`. So the button is disabled while the Details form has unsaved edits, and an untouched Details form reloads itself on any job change (a new summary or a crew's tap) so its save check stays current. A form with edits keeps them and the "changed while you were editing" notice, as before.
+- The action reads the notes from the database, not from the browser. Notes over 8000 characters are refused; the reply must be non-empty, complete and at most 2000 characters.
+
 ## Database workflow
 
 - Schema changes are migration files in `supabase/migrations/`, created with `npx supabase migration new <name>` and applied with `npx supabase db push --remote` (project linked with the Supabase CLI). Since CLI 3.x, `db push`, `migration list` and `gen types` target a local Docker database unless given `--remote`; run `--dry-run` first to see which files will apply, and when Claude Code runs it the CLI also needs `--yes`, given only after the SQL is approved.

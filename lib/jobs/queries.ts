@@ -45,7 +45,7 @@ export async function getCrewDayJobs(crewId: string, date: string) {
 export type CrewDayJob = Awaited<ReturnType<typeof getCrewDayJobs>>[number];
 
 const JOB_DETAIL_COLUMNS =
-  "id, customer_name, address, job_type, scheduled_for, status, crew_id, notes, updated_at";
+  "id, customer_name, address, job_type, scheduled_for, status, crew_id, notes, summary, updated_at";
 
 // null when the job does not exist or RLS hides it; the drawer says so.
 export async function getJob(id: string) {
