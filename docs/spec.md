@@ -29,7 +29,7 @@ Nobody reads anything without a login.
 ## Optional stretch (only after all of the above works)
 
 - Job notes timeline: who changed what and when (`job_events`, written by a trigger)
-- A button that turns a crew's rough note into a clean job summary using the Claude API
+- A button that turns a crew's rough note into a clean job summary using an OpenAI model on Azure Foundry (Step 14, see Job summary)
 
 ## Cut on purpose
 
@@ -41,7 +41,7 @@ Payments, maps embeds, photo uploads, invoicing, notifications, a custom design 
 | --- | --- | --- |
 | profiles | id (references auth.users), name, role (`dispatcher` or `crew`), crew_id (nullable) | One row per login, created by a trigger on signup |
 | crews | id, name | 2 to 3 seed crews |
-| jobs | id, customer_name, address, job_type, scheduled_for (timestamptz), status, crew_id, notes, updated_at | `status` is a Postgres enum: `scheduled`, `on_site`, `done` |
+| jobs | id, customer_name, address, job_type, scheduled_for (timestamptz), status, crew_id, notes, summary, updated_at | `status` is a Postgres enum: `scheduled`, `on_site`, `done` |
 | job_events | id, job_id, changed_by, old_status, new_status, created_at | Written by a trigger (see Job timeline) |
 
 Time zone: the business runs on `America/Tijuana`. "Today" (crew day view, board date filter, seed data) means today in that zone. `scheduled_for` stays `timestamptz`, stored in UTC.
@@ -52,6 +52,7 @@ Data rules (enforced in the database):
 - A crew that still has jobs cannot be deleted. Reassign or delete its jobs first.
 - Only crew members belong to a crew. A dispatcher's `crew_id` is always null.
 - `notes` is never null. An empty note is `''`.
+- `summary` is never null (empty is `''`), at most 2000 characters.
 - `updated_at` is set by a trigger on every change to a job.
 
 ## Access rules (row-level security)
@@ -79,6 +80,17 @@ Decided in Step 10a (migration `add_job_events`):
 - `changed_by` is the logged-in user, also for crew changes through `update_job_status`. Changes made with no login (SQL Editor, seed) are kept with `changed_by` null and shown as "System". `supabase/seed.sql` clears the demo jobs' events after resetting them.
 - Only the dispatcher can read events. Crews and logged-out visitors cannot, not even for their own jobs.
 - Accepted: the RLS tests move North's 2:00 PM job and leave real events behind on the live database; re-running the seed clears them.
+
+## Job summary (Step 14)
+
+Decided 2026-11-16 (Step 14a, migration `add_job_summary`):
+
+- An OpenAI model deployed on Azure Foundry writes the summary, not the Claude API. Endpoint, key and deployment name are server-only env vars; placeholders until a Foundry resource exists.
+- Only the dispatcher uses it, from the job drawer. The result is saved in `jobs.summary`, never over `notes`, so the crews' own words stay.
+- No new policy: crews have no direct update on `jobs`, and `update_job_status` never touches `summary`. RLS works on rows, so a crew can read the summary of its own jobs, as it can read their notes.
+- A summary is not refreshed when a crew adds a note later. The dispatcher presses the button again to replace it.
+- Editing the summary writes no `job_events` row and arrives on the live board like any other job change.
+- Sending the (fictional) job notes to Azure is accepted; stated in the README.
 
 ## Database workflow
 

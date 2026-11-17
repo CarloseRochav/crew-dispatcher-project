@@ -106,6 +106,7 @@ export type Database = {
           notes: string
           scheduled_for: string
           status: Database["public"]["Enums"]["job_status"]
+          summary: string
           updated_at: string
         }
         Insert: {
@@ -117,6 +118,7 @@ export type Database = {
           notes?: string
           scheduled_for: string
           status?: Database["public"]["Enums"]["job_status"]
+          summary?: string
           updated_at?: string
         }
         Update: {
@@ -128,6 +130,7 @@ export type Database = {
           notes?: string
           scheduled_for?: string
           status?: Database["public"]["Enums"]["job_status"]
+          summary?: string
           updated_at?: string
         }
         Relationships: [
@@ -191,6 +194,7 @@ export type Database = {
           notes: string
           scheduled_for: string
           status: Database["public"]["Enums"]["job_status"]
+          summary: string
           updated_at: string
         }
         SetofOptions: {
