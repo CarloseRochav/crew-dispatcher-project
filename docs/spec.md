@@ -105,6 +105,16 @@ Decided 2026-11-18 (Step 15):
 - Verified 2026-11-18: a direct call with fictional notes returned a completed one-sentence summary with no reasoning tokens and no `<think>` block, and generating a summary in the app worked locally and then on the live site (see Deployment).
 - The base URL must end in `/openai/v1/`. The resource URL Foundry shows (`https://<resource>.openai.azure.com/`) is refused by `lib/ai/env.ts`, and the app then says AI isn't set up.
 
+## Crew notes (Step 16)
+
+Decided 2026-11-19, no database change:
+
+- The crew day view has a folded "Add a note" section per job. The note goes through `update_job_status` with `p_note`, so it is appended under the existing notes (trimmed, 1 to 1000 characters, checked with zod and again by the function).
+- The function always sets a status, so the form sends the status the card showed. The crew day view has no live updates, so the action reads the job's status first and refuses the note if it changed ("This job's status changed. Refresh, then add your note again."). A stale card can never move a job back.
+- Accepted limit: a change landing between that read and the function call is not caught. The fix is a migration letting `p_new_status` be null to mean "keep the current status", checked under the function's row lock. Not built yet.
+- A note with no status change writes no `job_events` row (Step 10 rule) and reaches the board live like any job change.
+- Verified 2026-11-19 in the browser and on the live site (see `docs/plans/step-16-crew-notes.md`).
+
 ## Database workflow
 
 - Schema changes are migration files in `supabase/migrations/`, created with `npx supabase migration new <name>` and applied with `npx supabase db push --remote` (project linked with the Supabase CLI). Since CLI 3.x, `db push`, `migration list` and `gen types` target a local Docker database unless given `--remote`; run `--dry-run` first to see which files will apply, and when Claude Code runs it the CLI also needs `--yes`, given only after the SQL is approved.

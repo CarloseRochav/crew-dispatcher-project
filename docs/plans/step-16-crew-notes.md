@@ -1,6 +1,6 @@
 # Step 16: crew adds a note from the phone
 
-First item of the README's "What I'd build next". Built 2026-11-19 without a plan review (asked to proceed on my own); needs a browser check before it is called verified.
+First item of the README's "What I'd build next". Built 2026-11-19 without a plan review (asked to proceed on my own), then checked in the browser and deployed (`7e9ff84`).
 
 ## Goal
 
@@ -41,7 +41,8 @@ The status read and the `update_job_status` call are two steps. A dispatcher cha
 6. Console open in `next dev`: no errors.
 7. `npm test`, `npm run build`.
 
-## Checked so far
+## Verified (2026-11-19)
 
 - `tsc --noEmit`, `eslint`, the unit tests without the database (122 of 122) and `npm run build` pass.
-- Not yet done: steps 2 to 6 in a browser, and the RLS tests against the live database.
+- Steps 2 to 5 checked in the browser: note saved and shown, empty note refused, note live in the dispatcher's drawer, stale card refused with the job left on Done.
+- Deployed to the live site with `7e9ff84`.
