@@ -69,6 +69,7 @@ Crew status changes through `update_job_status`:
 
 - One step at a time, forward or back: `scheduled` ↔ `on_site` ↔ `done`, so a crew can undo a mistaken tap. No jumps (`scheduled` ↔ `done`). No time limit. Sending the current status again is allowed, to add a note without moving the job.
 - A crew note is appended to the job's notes on a new line. It never replaces what the dispatcher wrote. Max 1000 characters.
+- No status (null) means "keep the current status", read under the job's row lock, so a note can be added without moving the job (Step 17). No status and no note is refused (`22004`).
 - A job that doesn't exist and a job from another crew return the same "Job not found" error, so a crew cannot discover other crews' job ids.
 
 ## Job timeline (Step 10)
@@ -111,9 +112,15 @@ Decided 2026-11-19, no database change:
 
 - The crew day view has a folded "Add a note" section per job. The note goes through `update_job_status` with `p_note`, so it is appended under the existing notes (trimmed, 1 to 1000 characters, checked with zod and again by the function).
 - The function always sets a status, so the form sends the status the card showed. The crew day view has no live updates, so the action reads the job's status first and refuses the note if it changed ("This job's status changed. Refresh, then add your note again."). A stale card can never move a job back.
-- Accepted limit: a change landing between that read and the function call is not caught. The fix is a migration letting `p_new_status` be null to mean "keep the current status", checked under the function's row lock. Not built yet.
+- Accepted limit: a change landing between that read and the function call is not caught. Closed in Step 17 (below).
 - A note with no status change writes no `job_events` row (Step 10 rule) and reaches the board live like any job change.
 - Verified 2026-11-19 in the browser and on the live site (see `docs/plans/step-16-crew-notes.md`).
+
+Decided 2026-11-19 (Step 17, migration `crew_note_keeps_status`):
+
+- `update_job_status` takes no status to mean "keep the current one", read after the `for update` lock, so a dispatcher's change can never be undone by a crew note. The note action sends no status and no longer reads the job first.
+- Existing calls with a status behave exactly as before. No status and no note is refused with `22004`.
+- RLS tests prove it, including the race (the dispatcher moves the job, then the crew sends a note). Made to fail once on purpose with `break_crew_note_keeps_status_on_purpose`, restored by `restore_crew_note_keeps_status`.
 
 ## Database workflow
 

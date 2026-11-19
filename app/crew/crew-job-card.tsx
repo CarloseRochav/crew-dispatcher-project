@@ -35,7 +35,7 @@ export function CrewJobCard({ job }: { job: CrewDayJob }) {
           <p className="pb-3 whitespace-pre-line">{job.notes}</p>
         </details>
       )}
-      <CrewNoteForm jobId={job.id} status={job.status} />
+      <CrewNoteForm jobId={job.id} />
       {/* Keyed by status: a fresh status clears an old error message. */}
       <StatusButtons key={job.status} jobId={job.id} status={job.status} />
     </article>

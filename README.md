@@ -66,7 +66,7 @@ Full rules: [`docs/spec.md`](docs/spec.md). Schema and policies: [`supabase/migr
 - **Live updates reload from the server.** A Realtime event triggers `router.refresh()` (one per burst, 300ms after the first event) instead of merging events in the browser: one source of truth, same filters, same access rules.
 - **Saves cannot overwrite newer changes.** An edit only saves if `updated_at` still matches the version the dispatcher opened.
 - **Crews never write to `jobs` directly.** A `security definer` function checks the crew and the status step, and touches no other column.
-- **A crew note never moves the job.** The function always sets a status, so a note re-sends the status the card showed. The phone view has no live updates, so the action first checks the job's status is unchanged and refuses the note otherwise. Accepted limit: a change landing in the milliseconds between that check and the save is not caught; the fix is a migration letting the function keep the current status under its row lock.
+- **A crew note never moves the job.** The phone view has no live updates, so a card can show an old status. A note is sent with no status, and the function keeps the job's current status, read under the row lock, so a note can never undo a status the dispatcher just set.
 - **One business time zone.** "Today" means today in `America/Tijuana`, computed with `Intl` only. Daylight-saving changes are handled: a time that does not exist on a clock-change day is rejected with a clear message.
 - **Postgres Changes, not Broadcast,** so Realtime reuses the tested RLS policies. Accepted limit: Postgres cannot check RLS on a deleted row, so logged-in users receive the id (only the id) of a deleted job. The app has no delete feature yet.
 - **Validation at every boundary.** zod checks every form, hidden field and URL parameter, including the "return to this view" value after saving (no open redirects).
@@ -79,11 +79,12 @@ Full rules: [`docs/spec.md`](docs/spec.md). Schema and policies: [`supabase/migr
 
 Built with Claude Code, one small step at a time, with every plan and every database change approved first.
 
-**Proved by tests (165, `npm test`).** RLS tests prove a crew cannot read or edit another crew's jobs, or change a job's customer, address or crew. Realtime tests prove a crew never hears about another crew's job. Timeline tests prove every status change is logged with the right person, crews cannot read the timeline and nobody can write it. Summary tests prove only the dispatcher can write a summary; the AI call is tested with a fake, so tests never reach Azure. Each kind was made to fail once on purpose:
+**Proved by tests (169, `npm test`).** RLS tests prove a crew cannot read or edit another crew's jobs, or change a job's customer, address or crew. Realtime tests prove a crew never hears about another crew's job. Timeline tests prove every status change is logged with the right person, crews cannot read the timeline and nobody can write it. Summary tests prove only the dispatcher can write a summary; the AI call is tested with a fake, so tests never reach Azure. Each kind was made to fail once on purpose:
 
 - A migration that widened the crew read policy made the 3 cross-crew read tests fail; the next migration restored it (both kept in `supabase/migrations/`).
 - A migration that let any logged-in user read the timeline made the 2 crew-read timeline tests fail; the next migration restored it.
 - A migration that let crews update their own jobs directly made the summary and customer/address tests fail; the next migration restored it.
+- A migration that made a note with no status send the job back to Scheduled made the 2 "note keeps the status" tests fail; the next migration restored it.
 - The Realtime tests failed before Realtime was turned on for `jobs`, and passed after.
 - Removing one line from the refresh scheduler made 2 of its 5 tests fail.
 
@@ -101,7 +102,6 @@ Built with Claude Code, one small step at a time, with every plan and every data
 
 ## What I'd build next
 
-- Let `update_job_status` keep the current status, so a crew note cannot race a dispatcher's change
 - Deleting jobs, together with a fix for the delete-event limit
 - A daily reset of the demo data, so the live board always has jobs for today
 - End-to-end browser tests for the two-window live update

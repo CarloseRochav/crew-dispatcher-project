@@ -173,6 +173,76 @@ describe("a crew can undo one status step on its own job (Step 7 decision)", () 
   });
 });
 
+describe("a crew note with no status keeps the job's status (Step 17)", () => {
+  const touchedIds = [jobIds.northOnSite, jobIds.northDone];
+  let snapshots: { id: string; status: JobStatus; notes: string }[] = [];
+
+  // Notes are appended, so each test puts back the exact status and notes it found.
+  beforeEach(async () => {
+    snapshots = await Promise.all(
+      touchedIds.map(async (id) => {
+        const { status, notes } = await readJobAsDispatcher(id);
+        return { id, status, notes };
+      }),
+    );
+  });
+
+  afterEach(async () => {
+    const results = await Promise.all(
+      snapshots.map(({ id, status, notes }) => dispatcher.from("jobs").update({ status, notes }).eq("id", id)),
+    );
+    for (const { error } of results) if (error) throw error;
+  });
+
+  function noteAsNorthCrew(id: string, note: string | undefined) {
+    return northCrew.rpc("update_job_status", { p_job_id: id, p_note: note });
+  }
+
+  it("adds the note and leaves the status as it was", async () => {
+    const before = await readJobAsDispatcher(jobIds.northOnSite);
+    const note = "rls-test: note with no status";
+
+    const { data, error } = await noteAsNorthCrew(jobIds.northOnSite, note);
+
+    expect(error).toBeNull();
+    expect(data?.status).toBe(before.status);
+    expect(data?.notes).toBe(before.notes === "" ? note : `${before.notes}\n${note}`);
+  });
+
+  // The Step 16 race: the dispatcher moves the job, then a crew sends a note from a stale card.
+  it("keeps a status the dispatcher just set", async () => {
+    const moved = await dispatcher.from("jobs").update({ status: "done" }).eq("id", jobIds.northOnSite);
+    expect(moved.error).toBeNull();
+
+    const { data, error } = await noteAsNorthCrew(jobIds.northOnSite, "rls-test: note after the dispatcher's move");
+
+    expect(error).toBeNull();
+    expect(data?.status).toBe("done");
+  });
+
+  it.each([
+    ["no note", undefined],
+    ["a note of only spaces", "   "],
+  ])("refuses a call with no status and %s", async (_case, note) => {
+    const before = await readJobAsDispatcher(jobIds.northDone);
+
+    const { error } = await noteAsNorthCrew(jobIds.northDone, note);
+
+    expect(error?.code).toBe("22004");
+    expect(await readJobAsDispatcher(jobIds.northDone)).toEqual(before);
+  });
+
+  it("gets 'Job not found' on another crew's job", async () => {
+    const before = await readJobAsDispatcher(jobIds.southOnSite);
+
+    const { error } = await noteAsNorthCrew(jobIds.southOnSite, "rls-test: written by North Crew");
+
+    expect(error?.code).toBe("P0002");
+    expect(error?.message).toBe("Job not found");
+    expect(await readJobAsDispatcher(jobIds.southOnSite)).toEqual(before);
+  });
+});
+
 describe("a crew cannot change customer, address or crew on its own job", () => {
   it.each<[string, JobUpdate]>([
     ["customer", { customer_name: "rls-test customer" }],

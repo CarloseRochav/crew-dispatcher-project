@@ -16,9 +16,11 @@ const STATUS_ERRORS: Record<string, string> = {
 };
 
 const NOTE_ERRORS: Record<string, string> = {
-  ...STATUS_ERRORS,
-  "22023": "This job's status changed. Refresh, then add your note again.",
+  P0002: STATUS_ERRORS.P0002,
+  "42501": STATUS_ERRORS["42501"],
   "22001": `Keep the note under ${CREW_NOTE_MAX_LENGTH} characters.`,
+  // zod already refuses an empty note; this is the database saying the same.
+  "22004": "Write a note first.",
 };
 
 export async function changeJobStatus(
@@ -58,30 +60,11 @@ export async function addCrewNote(_previous: CrewNoteState, formData: FormData):
     return { error: noteError?.message ?? "Something is off with this form. Refresh the page.", saved: false };
   }
 
+  // No status on purpose: the function keeps the job's current status under its row lock,
+  // so a note from a stale card can never move a job the dispatcher just moved (Step 17).
   const supabase = await createClient();
-
-  // update_job_status always sets a status. If the dispatcher moved the job after this card
-  // loaded, re-sending the card's status would quietly move it back, so refuse instead.
-  // A change landing between this read and the call below is not caught (see the Step 16 plan).
-  const { data: job, error: readError } = await supabase
-    .from("jobs")
-    .select("status")
-    .eq("id", parsed.data.jobId)
-    .maybeSingle();
-
-  if (readError) {
-    return { error: "Could not save the note right now. Try again in a minute.", saved: false };
-  }
-  if (!job) {
-    return { error: STATUS_ERRORS.P0002, saved: false };
-  }
-  if (job.status !== parsed.data.status) {
-    return { error: "This job's status changed. Refresh, then add your note again.", saved: false };
-  }
-
   const { error } = await supabase.rpc("update_job_status", {
     p_job_id: parsed.data.jobId,
-    p_new_status: parsed.data.status,
     p_note: parsed.data.note,
   });
 
