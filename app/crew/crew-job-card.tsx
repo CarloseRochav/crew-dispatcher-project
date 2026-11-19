@@ -3,6 +3,7 @@ import { JobStatusBadge } from "@/components/job-status-badge";
 import { formatJobTime } from "@/lib/business-time";
 import { mapsSearchUrl } from "@/lib/jobs/maps";
 import type { CrewDayJob } from "@/lib/jobs/queries";
+import { CrewNoteForm } from "./crew-note-form";
 import { StatusButtons } from "./status-buttons";
 
 // Four lines of job info (spec); notes stay folded so the card stays short.
@@ -34,6 +35,7 @@ export function CrewJobCard({ job }: { job: CrewDayJob }) {
           <p className="pb-3 whitespace-pre-line">{job.notes}</p>
         </details>
       )}
+      <CrewNoteForm jobId={job.id} status={job.status} />
       {/* Keyed by status: a fresh status clears an old error message. */}
       <StatusButtons key={job.status} jobId={job.id} status={job.status} />
     </article>
