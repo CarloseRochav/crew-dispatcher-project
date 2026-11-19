@@ -29,7 +29,7 @@ Nobody reads anything without a login.
 ## Optional stretch (only after all of the above works)
 
 - Job notes timeline: who changed what and when (`job_events`, written by a trigger)
-- A button that turns a crew's rough note into a clean job summary using an OpenAI model on Azure Foundry (Step 14, see Job summary)
+- A button that turns a crew's rough note into a clean job summary using a model on Azure Foundry, now DeepSeek (Steps 14 and 15, see Job summary)
 
 ## Cut on purpose
 
@@ -85,7 +85,7 @@ Decided in Step 10a (migration `add_job_events`):
 
 Decided 2026-11-16 (Step 14a, migration `add_job_summary`):
 
-- An OpenAI model deployed on Azure Foundry writes the summary, not the Claude API. Endpoint, key and deployment name are server-only env vars; placeholders until a Foundry resource exists.
+- An OpenAI model deployed on Azure Foundry writes the summary, not the Claude API. Endpoint, key and deployment name are server-only env vars; placeholders until a Foundry resource exists. (Changed in Step 15: a DeepSeek model on the same Foundry resource.)
 - Only the dispatcher uses it, from the job drawer. The result is saved in `jobs.summary`, never over `notes`, so the crews' own words stay.
 - No new policy: crews have no direct update on `jobs`, and `update_job_status` never touches `summary`. RLS works on rows, so a crew can read the summary of its own jobs, as it can read their notes.
 - A summary is not refreshed when a crew adds a note later. The dispatcher presses the button again to replace it.
@@ -97,6 +97,13 @@ Decided in Step 14b:
 - The summary lives in a third drawer tab, "Summary", and is shown only there (not on board cards). It can only be generated, not typed by hand.
 - Saving a summary changes `updated_at`. So the button is disabled while the Details form has unsaved edits, and an untouched Details form reloads itself on any job change (a new summary or a crew's tap) so its save check stays current. A form with edits keeps them and the "changed while you were editing" notice, as before.
 - The action reads the notes from the database, not from the browser. Notes over 8000 characters are refused; the reply must be non-empty, complete and at most 2000 characters.
+
+Decided 2026-11-18 (Step 15):
+
+- The model is DeepSeek, deployed as `DeepSeek-V4.1-Flash-1017` on the Azure AI Foundry resource. The notes still go only to Azure, so the privacy note is unchanged.
+- No code change: the app's Responses API call through the `openai` package works with this deployment as it is. Switching models later only means changing `AZURE_OPENAI_DEPLOYMENT`.
+- Verified 2026-11-18: a direct call with fictional notes returned a completed one-sentence summary with no reasoning tokens and no `<think>` block, and generating a summary in the app worked locally. The live site needs the three `AZURE_OPENAI_*` variables in Vercel (Production and Preview) before it can do the same.
+- The base URL must end in `/openai/v1/`. The resource URL Foundry shows (`https://<resource>.openai.azure.com/`) is refused by `lib/ai/env.ts`, and the app then says AI isn't set up.
 
 ## Database workflow
 

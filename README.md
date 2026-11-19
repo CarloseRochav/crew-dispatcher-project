@@ -26,7 +26,7 @@ Click a card to edit it in a side panel without leaving the board, or press **Ne
 
 The **History** tab lists who changed the job's status and when, newest first, and updates live while the drawer is open. Switching tabs keeps unsaved edits.
 
-The **Summary** tab turns the job's notes into a short, clean summary with an OpenAI model on Azure AI Foundry, saved with the job. Pressing the button again replaces it.
+The **Summary** tab turns the job's notes into a short, clean summary with a DeepSeek model on Azure AI Foundry, saved with the job. Pressing the button again replaces it.
 
 ### Crew day view (phone)
 
@@ -71,7 +71,7 @@ Full rules: [`docs/spec.md`](docs/spec.md). Schema and policies: [`supabase/migr
 - **Validation at every boundary.** zod checks every form, hidden field and URL parameter, including the "return to this view" value after saving (no open redirects).
 - **Tests run against the live Supabase project** with the public key and real demo logins, so they test the real policies. Each test sets up its own starting data, because the database is shared.
 - **Public key format.** `NEXT_PUBLIC_SUPABASE_ANON_KEY` holds Supabase's new publishable key (`sb_publishable_…`), which replaces the old anon key. The service role key is not used anywhere.
-- **AI summary on Azure AI Foundry, server-side only.** The dispatcher's button calls a server action that reads the notes from the database (never from the browser), sends them to an OpenAI deployment through the official `openai` package and Azure's v1 API, checks the reply with zod and saves it in `jobs.summary`, apart from the crews' own notes. The key and endpoint are server-only env vars; without them the app runs and the Summary tab says AI isn't set up. Notes are treated as data, so a note that says "ignore your instructions" is summarized, not obeyed. The demo notes are fictional, but they are sent to Azure: a real company would need to agree to that first.
+- **AI summary on Azure AI Foundry, server-side only.** The dispatcher's button calls a server action that reads the notes from the database (never from the browser), sends them to a DeepSeek deployment (`DeepSeek-V4.1-Flash-1017`) through the official `openai` package and Azure's v1 API, which serves Foundry models other than OpenAI's through the same Responses call, checks the reply with zod and saves it in `jobs.summary`, apart from the crews' own notes. The key and endpoint are server-only env vars; without them the app runs and the Summary tab says AI isn't set up. Notes are treated as data, so a note that says "ignore your instructions" is summarized, not obeyed. The demo notes are fictional, but they are sent to Azure: a real company would need to agree to that first.
 - **Light and dark, same tokens.** A header switch cycles System (default, follows the OS), Light and Dark, remembered per device. A tiny inline script applies the choice before the first paint, so dark never flashes white. Every dark text pair passes WCAG AA, measured.
 
 ## What I verified
@@ -87,6 +87,8 @@ Built with Claude Code, one small step at a time, with every plan and every data
 - Removing one line from the refresh scheduler made 2 of its 5 tests fail.
 
 **Checked on the live site.** Logged-out redirects, both roles, a phone tap updating the board, a crew blocked from the board, and only the public key in the browser code ([details](docs/spec.md#deployment)).
+
+**Checked with the real model (Step 15).** Claude expected Azure's Responses API not to serve a DeepSeek model and planned to rewrite the AI call. Before changing any code, one direct call with fictional notes showed the existing call already works, so the rewrite was dropped. Generating a summary in the app then worked locally.
 
 **Where the AI got it wrong.** From [`docs/ai-log.md`](docs/ai-log.md):
 
@@ -109,5 +111,5 @@ Built with Claude Code, one small step at a time, with every plan and every data
 2. Apply the schema: `npx supabase link --project-ref <your-ref>`, then `npx supabase db push --remote` (Supabase CLI 3.x targets a local database without `--remote`).
 3. In Authentication > Users, add `dispatcher@example.com`, `north.crew@example.com` and `south.crew@example.com` with "Auto Confirm User". Put their passwords in `.env.local` (`TEST_*_PASSWORD`, used by the tests only).
 4. Run `supabase/seed.sql` in the SQL Editor. Re-run it any day to move the demo jobs to today.
-5. Optional, for job summaries: deploy a model in Azure AI Foundry and fill in `AZURE_OPENAI_BASE_URL`, `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_DEPLOYMENT` in `.env.local` (and in Vercel for the live site).
+5. Optional, for job summaries: deploy a model in Azure AI Foundry (this project uses `DeepSeek-V4.1-Flash-1017`) and fill in `AZURE_OPENAI_BASE_URL` (ending in `/openai/v1/`), `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_DEPLOYMENT` in `.env.local`, never in `.env.example` (and in Vercel for the live site).
 6. `npm install`, then `npm run dev` (http://localhost:3000) and `npm test`.
