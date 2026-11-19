@@ -182,7 +182,7 @@ export type Database = {
       update_job_status: {
         Args: {
           p_job_id: string
-          p_new_status: Database["public"]["Enums"]["job_status"]
+          p_new_status?: Database["public"]["Enums"]["job_status"]
           p_note?: string
         }
         Returns: {

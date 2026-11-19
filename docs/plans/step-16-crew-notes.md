@@ -19,7 +19,7 @@ On `/crew`, each job card has an "Add a note" section. The note is appended unde
 
 ## Known gap
 
-The status read and the `update_job_status` call are two steps. A dispatcher change landing in the few milliseconds between them is not caught, and the note would move the job back one step. The real fix is a migration: let `p_new_status` be null to mean "keep the current status", checked inside the function's row lock. Not done here because it changes the database and needs approval.
+The status read and the `update_job_status` call are two steps. A dispatcher change landing in the few milliseconds between them is not caught, and the note would move the job back one step. The real fix is a migration: let `p_new_status` be null to mean "keep the current status", checked inside the function's row lock. Not done here because it changes the database and needs approval. Done in Step 17 (`step-17-crew-note-keeps-status.md`).
 
 ## Files
 

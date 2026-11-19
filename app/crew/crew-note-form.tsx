@@ -6,17 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CREW_NOTE_MAX_LENGTH } from "@/lib/jobs/crew-note";
-import type { JobStatus } from "@/lib/jobs/status";
 import { addCrewNote, type CrewNoteState } from "./actions";
 
 const initialState: CrewNoteState = { error: null, saved: false };
 
-type CrewNoteFormProps = {
-  jobId: string;
-  status: JobStatus;
-};
-
-export function CrewNoteForm({ jobId, status }: CrewNoteFormProps) {
+export function CrewNoteForm({ jobId }: { jobId: string }) {
   // Controlled, so a failed save keeps what the crew typed; cleared only after a save.
   const [note, setNote] = useState("");
   const [state, formAction, pending] = useActionState(async (previous: CrewNoteState, formData: FormData) => {
@@ -32,7 +26,6 @@ export function CrewNoteForm({ jobId, status }: CrewNoteFormProps) {
       <summary className="flex min-h-11 cursor-pointer items-center font-medium text-ink">Add a note</summary>
       <form action={formAction} className="flex flex-col gap-2 pb-3">
         <input type="hidden" name="jobId" value={jobId} />
-        <input type="hidden" name="status" value={status} />
         <Label htmlFor={fieldId} className="text-muted-foreground">
           The dispatcher sees it on the job. It is added under the existing notes.
         </Label>
