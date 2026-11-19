@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local git worktrees (separate branches checked out next to master)
+/.worktrees/
