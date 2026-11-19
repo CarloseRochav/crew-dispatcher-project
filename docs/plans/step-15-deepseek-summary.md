@@ -33,4 +33,4 @@ The plan was to switch `lib/ai/summarize-notes.ts` from the Responses API to Cha
 | --- | --- |
 | Direct call with fictional notes | Pass (table above) |
 | Generate summary in the app, locally (`next dev`, as the dispatcher) | Pass, checked by the owner |
-| Live site | Not yet: needs the three `AZURE_OPENAI_*` variables in Vercel |
+| Live site, after the variables were added in Vercel and `679e4a5` deployed | Pass, Generate summary as the dispatcher, checked by the owner |

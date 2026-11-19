@@ -88,7 +88,7 @@ Built with Claude Code, one small step at a time, with every plan and every data
 
 **Checked on the live site.** Logged-out redirects, both roles, a phone tap updating the board, a crew blocked from the board, and only the public key in the browser code ([details](docs/spec.md#deployment)).
 
-**Checked with the real model (Step 15).** Claude expected Azure's Responses API not to serve a DeepSeek model and planned to rewrite the AI call. Before changing any code, one direct call with fictional notes showed the existing call already works, so the rewrite was dropped. Generating a summary in the app then worked locally.
+**Checked with the real model (Step 15).** Claude expected Azure's Responses API not to serve a DeepSeek model and planned to rewrite the AI call. Before changing any code, one direct call with fictional notes showed the existing call already works, so the rewrite was dropped. Generating a summary in the app then worked locally and on the live site.
 
 **Where the AI got it wrong.** From [`docs/ai-log.md`](docs/ai-log.md):
 

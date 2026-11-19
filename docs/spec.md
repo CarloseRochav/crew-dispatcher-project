@@ -102,7 +102,7 @@ Decided 2026-11-18 (Step 15):
 
 - The model is DeepSeek, deployed as `DeepSeek-V4.1-Flash-1017` on the Azure AI Foundry resource. The notes still go only to Azure, so the privacy note is unchanged.
 - No code change: the app's Responses API call through the `openai` package works with this deployment as it is. Switching models later only means changing `AZURE_OPENAI_DEPLOYMENT`.
-- Verified 2026-11-18: a direct call with fictional notes returned a completed one-sentence summary with no reasoning tokens and no `<think>` block, and generating a summary in the app worked locally. The live site needs the three `AZURE_OPENAI_*` variables in Vercel (Production and Preview) before it can do the same.
+- Verified 2026-11-18: a direct call with fictional notes returned a completed one-sentence summary with no reasoning tokens and no `<think>` block, and generating a summary in the app worked locally and then on the live site (see Deployment).
 - The base URL must end in `/openai/v1/`. The resource URL Foundry shows (`https://<resource>.openai.azure.com/`) is refused by `lib/ai/env.ts`, and the app then says AI isn't set up.
 
 ## Database workflow
@@ -147,6 +147,12 @@ Verified on the live URL (2026-10-27):
 - North Crew opening `/board` is redirected away.
 - The board's browser code contains only the publishable key: no `service_role`, no secret key (checked in DevTools after login).
 - Before the first push, all git history was scanned for the real `.env.local` values and key patterns: none found.
+
+Verified on the live URL (2026-11-18, Step 15):
+
+- The three `AZURE_OPENAI_*` variables are set in Vercel and in no file in the repo. They were added before the push of `679e4a5`, so that deploy picked them up.
+- As the dispatcher, Generate summary in the job drawer wrote a summary with `DeepSeek-V4.1-Flash-1017` on Azure AI Foundry.
+- Before that push, the staged changes were checked for the Azure key and endpoint: none found.
 
 ## Screens
 
